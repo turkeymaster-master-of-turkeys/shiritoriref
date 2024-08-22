@@ -1,8 +1,13 @@
 import logging
+import os
+
 import nextcord
 from nextcord import SlashOption
 from nextcord.ext import commands
 import botutils
+from dotenv import load_dotenv
+
+load_dotenv()
 
 intents = nextcord.Intents.all()
 bot = commands.Bot(intents=intents)
@@ -190,4 +195,4 @@ async def initiate_duel(
 
 
 if __name__ == '__main__':
-    bot.run("")
+    bot.run(os.getenv("TOKEN"))
