@@ -1,0 +1,2 @@
+nextcord
+jisho_api

@@ -1,9 +1,8 @@
 import nextcord.ui
-from jisho_api.word import Word
 from nextcord import Interaction, ButtonStyle
 from nextcord.ui import Button, View
 
-from app import translationtools
+import translationtools
 
 
 def get_view(user: nextcord.User, callback) -> nextcord.ui.view.View:
@@ -41,7 +40,7 @@ async def take_bot_turn(inter: nextcord.Interaction, previous_word: str, played_
     async def on_fail():
         await inter.channel.send(f"I have no words starting with {previous_word[-1]}. I lose!")
 
-    words = translationtools.get_dictionary(previous_word[-1], previous_word, played_words, on_fail)
+    words = await translationtools.get_dictionary(previous_word[-1], previous_word, played_words, on_fail)
     if not words:
         return ""
 

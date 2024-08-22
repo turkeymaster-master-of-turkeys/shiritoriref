@@ -1,18 +1,26 @@
 import asyncio
 import logging
-import os
 
 import nextcord
 from nextcord import SlashOption
 from nextcord.ext import commands
 
-from app import botutils, translationtools
-from app.translationtools import hiragana_to_katakana, romaji_to_hiragana
+import botutils
+import translationtools
+from translationtools import hiragana_to_katakana, romaji_to_hiragana
 
 intents = nextcord.Intents.all()
 bot = commands.Bot(intents=intents)
 
-logger = logging.getLogger()
+logger = logging.getLogger("shiritori-ref")
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    filename='app.log',
+    filemode='a'
+)
+logger.addHandler(logging.StreamHandler())
 
 
 @bot.event
@@ -44,7 +52,7 @@ async def duel(
         await initiate_duel(inter, inter.user, user, mode, chat)
         return
 
-    view = botutils.get_view(user, lambda: initiate_duel(inter, user, inter.user, mode, chat))
+    view = botutils.get_view(user, lambda: initiate_duel(inter, inter.user, user, mode, chat))
 
     await inter.response.send_message(
         f"{user.mention}, you have been challenged to a duel by {inter.user.mention}!", view=view)
@@ -94,9 +102,8 @@ async def initiate_duel(
                                  f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
         try:
             def check(msg: nextcord.Message):
-                # return msg.author.id == 349456234878861313 and msg.channel == inter.channel
                 return (msg.author.id == current.id and msg.channel == inter.channel and
-                        (chat != "on" or msg.content[0] == "\"" and msg.content[-1] == "\""))
+                        (chat != "on" or msg.content[0:2] == "> "))
 
             response: nextcord.Message = await bot.wait_for(
                 'message', timeout=15.0 if mode == "Speed" else 60.0, check=check)
@@ -106,7 +113,7 @@ async def initiate_duel(
 
         hiragana = romaji_to_hiragana(response.content.strip("\""))
 
-        logger.info(current.display_name, hiragana)
+        logger.info(f"{current.display_name} played {hiragana}")
 
         if not hiragana:
             lives[current] -= 1
@@ -143,7 +150,7 @@ async def initiate_duel(
             await inter.channel.send(f"{hiragana} is not a valid word."
                                      f" You have {lives[current]} lives remaining.")
 
-        words = translationtools.get_dictionary(hiragana, previous_word, played_words, on_fail)
+        words = await translationtools.get_dictionary(hiragana, previous_word, played_words, on_fail)
         katakana = hiragana_to_katakana(hiragana)
 
         if hiragana not in words and katakana not in words:
@@ -168,4 +175,4 @@ async def initiate_duel(
 
 
 if __name__ == '__main__':
-    bot.run(os.getenv("TOKEN"))
+    bot.run("")

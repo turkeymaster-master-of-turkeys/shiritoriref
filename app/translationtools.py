@@ -3,7 +3,15 @@ import re
 from jisho_api.word import Word
 
 
-def get_dictionary(search: str, previous_word: str, played_words: set['str'], on_fail) -> dict:
+async def get_dictionary(search: str, previous_word: str, played_words: set['str'], on_fail) -> dict:
+    """
+    Uses the Jisho API to get a dictionary of words from the search term
+    :param search: The search term
+    :param previous_word: Previous word
+    :param played_words: Played words
+    :param on_fail: Function to call if no words are found
+    :return: Dictionary from readings to words
+    """
     wr = Word.request(search)
     if not wr:
         on_fail()
@@ -13,9 +21,9 @@ def get_dictionary(search: str, previous_word: str, played_words: set['str'], on
     for x in wr.dict()['data']:
         for y in x['japanese']:
             reading = y['reading']
-            if reading[0] != previous_word[-1] or reading[-1] == 'ん' or reading in played_words:
+            if not reading or len(reading) <= 1:
                 continue
-            if len(reading) == 1:
+            if (previous_word and reading[0] != previous_word[-1]) or reading[-1] == 'ん' or reading in played_words:
                 continue
             word_info = {'word': y['word'],
                          'meanings': [sense['english_definitions'][0] for sense in x['senses']]}
@@ -26,7 +34,7 @@ def get_dictionary(search: str, previous_word: str, played_words: set['str'], on
                 words[reading] = [word_info]
 
     if not words:
-        on_fail()
+        await on_fail()
 
     return words
 
@@ -34,8 +42,8 @@ def get_dictionary(search: str, previous_word: str, played_words: set['str'], on
 def romaji_to_hiragana(word: str) -> str or None:
     """
     Converts a string to hiragana, returns None if it isn't valid romanji
-    :param word:
-    :return:
+    :param word: The word to convert
+    :return: The hiragana word
     """
     i = 0
     hiragana_word = ""
@@ -59,8 +67,8 @@ def romaji_to_hiragana(word: str) -> str or None:
 def hiragana_to_katakana(text):
     """
     Converts hiragana to katakana
-    :param text:
-    :return:
+    :param text: The text to convert
+    :return: The converted text
     """
     return ''.join(hiragana_to_katakana_dict[char] for char in text)
 
