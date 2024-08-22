@@ -2,12 +2,14 @@ from jisho_api.word import Word
 
 
 def match_kana(prev: str, curr: str) -> bool:
-    return prev[-1] == curr[0] or \
-        (prev[-1] == 'ぢ' and curr[0] == 'じ') or \
-        (prev[-1] == 'づ' and curr[0] == 'ず') or \
-        (prev[-1] == 'ゃ' and (curr[0] == 'や' or prev[-2] == curr[0])) or \
-        (prev[-1] == 'ゅ' and (curr[0] == 'ゆ' or prev[-2] == curr[0])) or \
-        (prev[-1] == 'ょ' and (curr[0] == 'よ' or prev[-2] == curr[0]))
+    l = prev[-1]
+    f = curr[0]
+    return not prev or l == f or \
+        ((l, f) == ('ぢ', 'じ')) or \
+        ((l, f) == ('づ', 'ず')) or \
+        (l == 'ゃ' and (f == 'や' or prev[-2] == f)) or \
+        (l == 'ゅ' and (f == 'ゆ' or prev[-2] == f)) or \
+        (l == 'ょ' and (f == 'よ' or prev[-2] == f))
 
 
 async def get_dictionary(search: str, previous_word: str, played_words: set['str']) -> dict:
@@ -64,13 +66,31 @@ def romaji_to_hiragana(word: str) -> str or None:
     return hiragana_word
 
 
-def hiragana_to_katakana(text):
+def hiragana_to_katakana(text: str) -> str:
     """
     Converts hiragana to katakana
     :param text: The text to convert
     :return: The converted text
     """
-    return ''.join(hiragana_to_katakana_dict[char] for char in text)
+
+    def to_katakana(char, next_char):
+        if char in set_a and next_char == 'あ' or \
+                char in set_e and (next_char == 'え' or next_char == 'い') or \
+                char in set_i and next_char == 'い' or \
+                char in set_o and (next_char == 'お' or next_char == 'う') or \
+                char in set_u and next_char == 'う' or \
+                char == 'え' and next_char == 'い' or \
+                char == 'お' and next_char == 'う':
+            return 'ー'
+        return hiragana_to_katakana_dict[next_char]
+
+    katakana = ""
+    for i in range(len(text)-1, -1, -1):
+        if i == 0:
+            katakana = hiragana_to_katakana_dict[text[i]] + katakana
+        else:
+            katakana = to_katakana(text[i - 1], text[i]) + katakana
+    return katakana
 
 
 romaji_to_hiragana_dict: dict[str, str] = {
@@ -122,3 +142,9 @@ hiragana_to_katakana_dict = {
     'ぱ': 'パ', 'ぴ': 'ピ', 'ぷ': 'プ', 'ぺ': 'ペ', 'ぽ': 'ポ',
     'ゃ': 'ャ', 'ゅ': 'ュ', 'ょ': 'ョ', 'っ': 'ッ'
 }
+
+set_a = {'あ', 'か', 'さ', 'た', 'な', 'は', 'ま', 'や', 'ら', 'わ', 'が', 'ざ', 'だ', 'ば', 'ぱ'}
+set_i = {'い', 'き', 'し', 'ち', 'に', 'ひ', 'み', 'り', 'ぎ', 'じ', 'ぢ', 'び', 'ぴ'}
+set_u = {'う', 'く', 'す', 'つ', 'ぬ', 'ふ', 'む', 'ゆ', 'る', 'ぐ', 'ず', 'づ', 'ぶ', 'ぷ'}
+set_e = {'え', 'け', 'せ', 'て', 'ね', 'へ', 'め', 'れ', 'げ', 'ぜ', 'で', 'べ', 'ぺ'}
+set_o = {'お', 'こ', 'そ', 'と', 'の', 'ほ', 'も', 'よ', 'ろ', 'ご', 'ぞ', 'ど', 'ぼ', 'ぽ'}
