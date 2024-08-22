@@ -1,5 +1,35 @@
 import re
 
+from jisho_api.word import Word
+
+
+def get_dictionary(search: str, previous_word: str, played_words: set['str'], on_fail) -> dict:
+    wr = Word.request(search)
+    if not wr:
+        on_fail()
+        return {}
+
+    words = {}
+    for x in wr.dict()['data']:
+        for y in x['japanese']:
+            reading = y['reading']
+            if reading[0] != previous_word[-1] or reading[-1] == 'ん' or reading in played_words:
+                continue
+            if len(reading) == 1:
+                continue
+            word_info = {'word': y['word'],
+                         'meanings': [sense['english_definitions'][0] for sense in x['senses']]}
+
+            if reading in words:
+                words[reading].append(word_info)
+            else:
+                words[reading] = [word_info]
+
+    if not words:
+        on_fail()
+
+    return words
+
 
 def romaji_to_hiragana(word: str) -> str or None:
     """

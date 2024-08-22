@@ -1,12 +1,12 @@
 import asyncio
-import os
 import logging
-from jisho_api.word import Word
-import nextcord
-from nextcord.ext import commands
-from nextcord import Interaction, SlashOption
+import os
 
-from app import botutils
+import nextcord
+from nextcord import SlashOption
+from nextcord.ext import commands
+
+from app import botutils, translationtools
 from app.translationtools import hiragana_to_katakana, romaji_to_hiragana
 
 intents = nextcord.Intents.all()
@@ -138,30 +138,16 @@ async def initiate_duel(
                                      f" You have {lives[current]} lives remaining.")
             continue
 
-        wr = Word.request(response.content.strip("\""))
-        if not wr:
+        async def on_fail():
             lives[current] -= 1
             await inter.channel.send(f"{hiragana} is not a valid word."
                                      f" You have {lives[current]} lives remaining.")
-            continue
 
-        words = {}
-        for x in wr.dict()['data']:
-            for y in x['japanese']:
-                reading = y['reading']
-                word_info = {'word': y['word'], 'meanings': [sense['english_definitions'][0] for sense in x['senses']]}
-
-                if reading in words:
-                    words[reading].append(word_info)
-                else:
-                    words[reading] = [word_info]
-
+        words = translationtools.get_dictionary(hiragana, previous_word, played_words, on_fail)
         katakana = hiragana_to_katakana(hiragana)
 
         if hiragana not in words and katakana not in words:
-            lives[current] -= 1
-            await inter.channel.send(f"{hiragana} is not a valid word."
-                                     f" You have {lives[current]} lives remaining.")
+            await on_fail()
             continue
 
         if hiragana in words:

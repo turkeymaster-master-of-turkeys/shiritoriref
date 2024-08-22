@@ -3,6 +3,8 @@ from jisho_api.word import Word
 from nextcord import Interaction, ButtonStyle
 from nextcord.ui import Button, View
 
+from app import translationtools
+
 
 def get_view(user: nextcord.User, callback) -> nextcord.ui.view.View:
     accept_button = Button(label="Accept", style=ButtonStyle.green)
@@ -35,29 +37,14 @@ def get_view(user: nextcord.User, callback) -> nextcord.ui.view.View:
 
 async def take_bot_turn(inter: nextcord.Interaction, previous_word: str, played_words: set[str]) -> str:
     await inter.channel.send(f"My turn!")
-    wr = Word.request(str(previous_word[-1]))
-    if not wr:
+
+    async def on_fail():
         await inter.channel.send(f"I have no words starting with {previous_word[-1]}. I lose!")
-        return ""
-    words = {}
-    for x in wr.dict()['data']:
-        for y in x['japanese']:
-            reading = y['reading']
-            if reading[0] != previous_word[-1] or reading[-1] == 'ん' or reading in played_words:
-                continue
-            if len(reading) == 1:
-                continue
-            word_info = {'word': y['word'],
-                         'meanings': [sense['english_definitions'][0] for sense in x['senses']]}
 
-            if reading in words:
-                words[reading].append(word_info)
-            else:
-                words[reading] = [word_info]
-
+    words = translationtools.get_dictionary(previous_word[-1], previous_word, played_words, on_fail)
     if not words:
-        await inter.channel.send(f"I have no words starting with {previous_word[-1]}. I lose!")
         return ""
+
     word = list(words.keys())[0]
     for i in range(3):
         if i >= len(words[word]):
