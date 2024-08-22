@@ -1,6 +1,15 @@
 from jisho_api.word import Word
 
 
+def match_kana(prev: str, curr: str) -> bool:
+    return prev[-1] == curr[0] or \
+        (prev[-1] == 'ぢ' and curr[0] == 'じ') or \
+        (prev[-1] == 'づ' and curr[0] == 'ず') or \
+        (prev[-1] == 'ゃ' and (curr[0] == 'や' or prev[-2] == curr[0])) or \
+        (prev[-1] == 'ゅ' and (curr[0] == 'ゆ' or prev[-2] == curr[0])) or \
+        (prev[-1] == 'ょ' and (curr[0] == 'よ' or prev[-2] == curr[0]))
+
+
 async def get_dictionary(search: str, previous_word: str, played_words: set['str']) -> dict:
     """
     Uses the Jisho API to get a dictionary of words from the search term
@@ -111,11 +120,5 @@ hiragana_to_katakana_dict = {
     'だ': 'ダ', 'ぢ': 'ヂ', 'づ': 'ヅ', 'で': 'デ', 'ど': 'ド',
     'ば': 'バ', 'び': 'ビ', 'ぶ': 'ブ', 'べ': 'ベ', 'ぼ': 'ボ',
     'ぱ': 'パ', 'ぴ': 'ピ', 'ぷ': 'プ', 'ぺ': 'ペ', 'ぽ': 'ポ',
-    'きゃ': 'キャ', 'きゅ': 'キュ', 'きょ': 'キョ',
-    'しゃ': 'シャ', 'しゅ': 'シュ', 'しょ': 'ショ',
-    'ちゃ': 'チャ', 'ちゅ': 'チュ', 'ちょ': 'チョ',
-    'にゃ': 'ニャ', 'にゅ': 'ニュ', 'にょ': 'ニョ',
-    'ひゃ': 'ヒャ', 'ひゅ': 'ヒュ', 'ひょ': 'ヒョ',
-    'みゃ': 'ミャ', 'みゅ': 'ミュ', 'みょ': 'ミョ',
-    'りゃ': 'リャ', 'りゅ': 'リュ', 'りょ': 'リョ', 'っ': 'ッ'
+    'ゃ': 'ャ', 'ゅ': 'ュ', 'ょ': 'ョ', 'っ': 'ッ'
 }

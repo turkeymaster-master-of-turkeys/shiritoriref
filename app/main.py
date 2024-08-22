@@ -57,6 +57,18 @@ async def duel(
         f"{user.mention}, you have been challenged to a duel by {inter.user.mention}!", view=view)
 
 
+@bot.command(
+    name="survive",
+    description="Start a survival mode game",
+    guild_ids=[643165990695206920, 931645765980393624]
+)
+async def survival(
+        inter: nextcord.Interaction,
+        chat: str = SlashOption(description="Enable chatting during the game.")
+):
+    await initiate_duel(inter, inter.user, inter.user, "Survival", chat)
+
+
 async def initiate_duel(
         inter: nextcord.Interaction, challenger: nextcord.User, challenged: nextcord.User, mode, chat
 ):
@@ -71,10 +83,16 @@ async def initiate_duel(
     current = challenger if challenged == bot.user else challenged
     previous_word = ""
     played_words = set()
-    lives = {challenger.id: 3, challenged.id: 3}
+    lives = {0: 3} if mode == "Survival" else {challenger.id: 3, challenged.id: 3}
 
     while True:
         logger.info(f"Lives: {lives}")
+
+        def lose_life():
+            if mode == "Survival":
+                lives[0] -= 1
+            else:
+                lives[current.id] -= 1
 
         if current == bot.user:
             played_word = await botutils.take_bot_turn(inter, previous_word, played_words)
@@ -87,8 +105,11 @@ async def initiate_duel(
                 return
 
         if lives[current.id] == 0:
-            await inter.channel.send(f"{current.mention} has lost all their lives. "
-                                     f"{challenger if current == challenged else challenged} wins!")
+            if mode == "Survival":
+                await inter.channel.send(f"You have lost all your lives! You survived for {streak} words.")
+            else:
+                await inter.channel.send(f"{current.mention} has lost all their lives. "
+                                         f"{challenger if current == challenged else challenged} wins!")
             return
 
         if streak != 0 and streak % 5 == 0:
@@ -104,8 +125,11 @@ async def initiate_duel(
             else:
                 await inter.channel.send(f"The streak is {streak}!")
 
-        await inter.channel.send(f"{current.display_name}, your move!"
-                                 f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
+        if mode == "Survival":
+            await inter.channel.send(f"You have 60 seconds for the next word!")
+        else:
+            await inter.channel.send(f"{current.display_name}, your move!"
+                                     f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
         try:
             def check(msg: nextcord.Message):
                 return (msg.author.id == current.id and msg.channel == inter.channel and
@@ -122,42 +146,38 @@ async def initiate_duel(
         logger.info(f"{current.display_name} played {hiragana}")
 
         if not hiragana:
-            lives[current.id] -= 1
+            lose_life()
             await inter.channel.send(f"{response.content.strip("\"")} is not a valid Romaji word."
                                      f" You have {lives[current.id]} lives remaining.")
             continue
 
         if hiragana in played_words:
-            lives[current.id] -= 1
+            lose_life()
             await inter.channel.send(f"{hiragana} has already been played."
                                      f" You have {lives[current.id]} lives remaining.")
             continue
 
-        if previous_word and hiragana[0] != previous_word[-1]:
-            if (previous_word[-1] == 'ぢ' and hiragana[0] == 'じ') or \
-                    (previous_word[-1] == 'づ' and hiragana[0] == 'ず'):
-                pass
-            if previous_word[-1] == 'ゃ' or previous_word[-1] == 'ゅ' or previous_word[-1] == 'ょ':
-                if previous_word[-2] == hiragana[0]:
-                    pass
-            lives[current.id] -= 1
+        if not translationtools.match_kana(previous_word, hiragana):
+            lose_life()
             await inter.channel.send(f"{hiragana} does not start with {previous_word[-1]}!"
                                      f" You have {lives[current.id]} lives remaining.")
             continue
 
         if hiragana[-1] == 'ん':
-            lives[current.id] -= 1
+            lose_life()
             await inter.channel.send(f"{hiragana} ends with ん!"
                                      f" You have {lives[current.id]} lives remaining.")
             continue
 
         async def on_fail():
-            lives[current.id] -= 1
+            lose_life()
             await inter.channel.send(f"{hiragana} is not a valid word."
                                      f" You have {lives[current.id]} lives remaining.")
 
         words = await translationtools.get_dictionary(hiragana, previous_word, played_words)
         katakana = hiragana_to_katakana(hiragana)
+
+        logger.info(f"checking for {hiragana} or {katakana} in {words.keys()}")
 
         if hiragana not in words and katakana not in words:
             await on_fail()
@@ -178,7 +198,8 @@ async def initiate_duel(
         played_words.add(hiragana)
         previous_word = hiragana
         streak += 1
-        current = challenger if current == challenged else challenged
+        if mode != "Survival":
+            current = challenger if current == challenged else challenged
 
 
 if __name__ == '__main__':
