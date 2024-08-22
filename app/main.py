@@ -4,9 +4,9 @@ import logging
 from jisho_api.word import Word
 import nextcord
 from nextcord.ext import commands
-from nextcord import Interaction, SlashOption, ButtonStyle
-from nextcord.ui import Button, View
+from nextcord import Interaction, SlashOption
 
+from app import botutils
 from app.translationtools import hiragana_to_katakana, romaji_to_hiragana
 
 intents = nextcord.Intents.all()
@@ -44,30 +44,7 @@ async def duel(
         await initiate_duel(inter, inter.user, user, mode, chat)
         return
 
-    accept_button = Button(label="Accept", style=ButtonStyle.green)
-    decline_button = Button(label="Decline", style=ButtonStyle.red)
-
-    view = View()
-    view.add_item(accept_button)
-    view.add_item(decline_button)
-
-    async def accept_callback(interaction: Interaction):
-        if interaction.user != user:
-            await interaction.response.send_message("You cannot accept a duel for someone else!", ephemeral=True)
-            return
-        await interaction.response.edit_message(content=f"{user.display_name} has accepted the duel!", view=None)
-        await initiate_duel(inter, inter.user, user, mode, chat)
-
-    # Callback function for declining the duel
-    async def decline_callback(interaction: Interaction):
-        if interaction.user != user:
-            await interaction.response.send_message("You cannot accept a duel for someone else!", ephemeral=True)
-            return
-        await interaction.response.edit_message(content=f"{user.display_name} has declined the duel.", view=None)
-        await initiate_duel(inter, inter.user, user, mode, chat)
-
-    accept_button.callback = accept_callback
-    decline_button.callback = decline_callback
+    view = botutils.get_view(user, lambda: initiate_duel(inter, user, inter.user, mode, chat))
 
     await inter.response.send_message(
         f"{user.mention}, you have been challenged to a duel by {inter.user.mention}!", view=view)
@@ -87,40 +64,14 @@ async def initiate_duel(
 
     while True:
         if current == bot.user:
-            await inter.channel.send(f"My turn!")
-            wr = Word.request(str(previous_word[-1]))
-            if not wr:
-                await inter.channel.send(f"I have no words starting with {previous_word[-1]}. I lose!")
+            played_word = await botutils.take_bot_turn(inter, previous_word, played_words)
+            if played_word:
+                played_words.add(played_word)
+                previous_word = played_word
+                current = challenger
+                continue
+            else:
                 return
-            words = {}
-            for x in wr.dict()['data']:
-                for y in x['japanese']:
-                    reading = y['reading']
-                    if reading[0] != previous_word[-1] or reading[-1] == 'ん' or reading in played_words:
-                        continue
-                    if len(reading) == 1:
-                        continue
-                    word_info = {'word': y['word'],
-                                 'meanings': [sense['english_definitions'][0] for sense in x['senses']]}
-
-                    if reading in words:
-                        words[reading].append(word_info)
-                    else:
-                        words[reading] = [word_info]
-
-            if not words:
-                await inter.channel.send(f"I have no words starting with {previous_word[-1]}. I lose!")
-                return
-            word = list(words.keys())[0]
-            for i in range(3):
-                if i >= len(words[word]):
-                    break
-                match = words[word][i]
-                await inter.channel.send(f"{match['word']} ({word}):\n> {', '.join(match['meanings'])}")
-            played_words.add(word)
-            previous_word = word
-            current = challenger
-            continue
 
         if lives[current] == 0:
             await inter.channel.send(f"{current.mention} has lost all their lives. {challenger.mention} wins!")
