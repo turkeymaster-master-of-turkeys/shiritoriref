@@ -42,7 +42,6 @@ async def duel(
                                             " Wrap your words in \" to submit in chat mode. Default: on",
                                 choices=["on", "off"], required=False)
 ):
-    logger.info(f"{inter.user} challenged {user} to a duel in {mode} mode with chat {chat}.")
     if user == inter.user:
         await inter.response.send_message("You cannot duel yourself!", ephemeral=True)
         return
@@ -59,8 +58,12 @@ async def duel(
 
 
 async def initiate_duel(
-        inter: nextcord.Interaction, challenger: nextcord.User, challenged: nextcord.User, mode="Normal", chat="on"
+        inter: nextcord.Interaction, challenger: nextcord.User, challenged: nextcord.User, mode, chat
 ):
+    mode = mode or "Normal"
+    chat = chat or "on"
+    logger.info(f"{challenger} challenged {challenged} to a duel in {mode} mode with chat {chat}.")
+
     if challenged != bot.user:
         await inter.channel.send(f"{challenged.display_name}, as the challenged, you have the right of the first word.")
 
@@ -71,6 +74,8 @@ async def initiate_duel(
     lives = {challenger: 3, challenged: 3}
 
     while True:
+        logger.info(f"Lives: {lives}")
+
         if current == bot.user:
             played_word = await botutils.take_bot_turn(inter, previous_word, played_words)
             if played_word:
@@ -82,7 +87,8 @@ async def initiate_duel(
                 return
 
         if lives[current] == 0:
-            await inter.channel.send(f"{current.mention} has lost all their lives. {challenger.mention} wins!")
+            await inter.channel.send(f"{current.mention} has lost all their lives. "
+                                     f"{challenger if current == challenged else challenged} wins!")
             return
 
         if streak != 0 and streak % 5 == 0:

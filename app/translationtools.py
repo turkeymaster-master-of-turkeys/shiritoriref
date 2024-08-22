@@ -45,7 +45,7 @@ def romaji_to_hiragana(word: str) -> str or None:
     :param word: The word to convert
     :return: The hiragana word
     """
-    i = 0
+    i = 2 if word[0:2] == "> " else 0
     hiragana_word = ""
     while i < len(word):
         if i + 1 < len(word) and word[i] == word[i + 1]:
@@ -54,12 +54,10 @@ def romaji_to_hiragana(word: str) -> str or None:
         for j in range(min(3, len(word) - i), 0, -1):
             if word[i:i + j] in romaji_to_hiragana_dict:
                 hiragana_word += romaji_to_hiragana_dict[word[i:i + j]]
-                i += j - 1
+                i += j
                 break
-        i += 1
-
-    if re.search("[a-z]", hiragana_word):
-        return None
+        else:
+            return None
 
     return hiragana_word
 
