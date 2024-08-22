@@ -1,11 +1,11 @@
 import asyncio
-import re
 from jisho_api.word import Word
 import nextcord
 from nextcord.ext import commands
 from nextcord import Interaction, SlashOption, ButtonStyle
 from nextcord.ui import Button, View
 
+from app.translationtools import hiragana_to_katakana, romaji_to_hiragana
 
 intents = nextcord.Intents.all()
 bot = commands.Bot(intents=intents)
@@ -224,86 +224,6 @@ async def initiate_duel(
         previous_word = hiragana
         streak += 1
         current = challenger if current == challenged else challenged
-
-
-def romaji_to_hiragana(word: str) -> str or None:
-    i = 0
-    hiragana_word = ""
-    while i < len(word):
-        if i + 1 < len(word) and word[i] == word[i + 1]:
-            hiragana_word += "っ"  # Small tsu
-            i += 1
-        for j in range(min(3, len(word) - i), 0, -1):
-            if word[i:i + j] in romaji_to_hiragana_dict:
-                hiragana_word += romaji_to_hiragana_dict[word[i:i + j]]
-                i += j - 1
-                break
-        i += 1
-
-    if re.search("[a-z]", hiragana_word):
-        return None
-
-    return hiragana_word
-
-
-romaji_to_hiragana_dict: dict[str, str] = {
-    'a': 'あ', 'i': 'い', 'u': 'う', 'e': 'え', 'o': 'お',
-    'ka': 'か', 'ki': 'き', 'ku': 'く', 'ke': 'け', 'ko': 'こ',
-    'sa': 'さ', 'shi': 'し', 'su': 'す', 'se': 'せ', 'so': 'そ',
-    'ta': 'た', 'chi': 'ち', 'tsu': 'つ', 'te': 'て', 'to': 'と',
-    'na': 'な', 'ni': 'に', 'nu': 'ぬ', 'ne': 'ね', 'no': 'の',
-    'ha': 'は', 'hi': 'ひ', 'fu': 'ふ', 'he': 'へ', 'ho': 'ほ',
-    'ma': 'ま', 'mi': 'み', 'mu': 'む', 'me': 'め', 'mo': 'も',
-    'ya': 'や', 'yu': 'ゆ', 'yo': 'よ',
-    'ra': 'ら', 'ri': 'り', 'ru': 'る', 're': 'れ', 'ro': 'ろ',
-    'wa': 'わ', 'wo': 'を', 'n': 'ん',
-    'ga': 'が', 'gi': 'ぎ', 'gu': 'ぐ', 'ge': 'げ', 'go': 'ご',
-    'za': 'ざ', 'ji': 'じ', 'zu': 'ず', 'ze': 'ぜ', 'zo': 'ぞ',
-    'da': 'だ', 'di': 'ぢ', 'dzu': 'づ', 'de': 'で', 'do': 'ど',
-    'ba': 'ば', 'bi': 'び', 'bu': 'ぶ', 'be': 'べ', 'bo': 'ぼ',
-    'pa': 'ぱ', 'pi': 'ぴ', 'pu': 'ぷ', 'pe': 'ぺ', 'po': 'ぽ',
-    'kya': 'きゃ', 'kyu': 'きゅ', 'kyo': 'きょ',
-    'sha': 'しゃ', 'shu': 'しゅ', 'sho': 'しょ',
-    'cha': 'ちゃ', 'chu': 'ちゅ', 'cho': 'ちょ',
-    'nya': 'にゃ', 'nyu': 'にゅ', 'nyo': 'にょ',
-    'hya': 'ひゃ', 'hyu': 'ひゅ', 'hyo': 'ひょ',
-    'mya': 'みゃ', 'myu': 'みゅ', 'myo': 'みょ',
-    'rya': 'りゃ', 'ryu': 'りゅ', 'ryo': 'りょ',
-    'gya': 'ぎゃ', 'gyu': 'ぎゅ', 'gyo': 'ぎょ',
-    'ja': 'じゃ', 'ju': 'じゅ', 'jo': 'じょ',
-    'dya': 'ぢゃ', 'dyu': 'ぢゅ', 'dyo': 'ぢょ',
-    'bya': 'びゃ', 'byu': 'びゅ', 'byo': 'びょ',
-    'pya': 'ぴゃ', 'pyu': 'ぴゅ', 'pyo': 'ぴょ'
-}
-# Hiragana to Katakana dictionary
-hiragana_to_katakana_dict = {
-    'あ': 'ア', 'い': 'イ', 'う': 'ウ', 'え': 'エ', 'お': 'オ',
-    'か': 'カ', 'き': 'キ', 'く': 'ク', 'け': 'ケ', 'こ': 'コ',
-    'さ': 'サ', 'し': 'シ', 'す': 'ス', 'せ': 'セ', 'そ': 'ソ',
-    'た': 'タ', 'ち': 'チ', 'つ': 'ツ', 'て': 'テ', 'と': 'ト',
-    'な': 'ナ', 'に': 'ニ', 'ぬ': 'ヌ', 'ね': 'ネ', 'の': 'ノ',
-    'は': 'ハ', 'ひ': 'ヒ', 'ふ': 'フ', 'へ': 'ヘ', 'ほ': 'ホ',
-    'ま': 'マ', 'み': 'ミ', 'む': 'ム', 'め': 'メ', 'も': 'モ',
-    'や': 'ヤ', 'ゆ': 'ユ', 'よ': 'ヨ',
-    'ら': 'ラ', 'り': 'リ', 'る': 'ル', 'れ': 'レ', 'ろ': 'ロ',
-    'わ': 'ワ', 'を': 'ヲ', 'ん': 'ン',
-    'が': 'ガ', 'ぎ': 'ギ', 'ぐ': 'グ', 'げ': 'ゲ', 'ご': 'ゴ',
-    'ざ': 'ザ', 'じ': 'ジ', 'ず': 'ズ', 'ぜ': 'ゼ', 'ぞ': 'ゾ',
-    'だ': 'ダ', 'ぢ': 'ヂ', 'づ': 'ヅ', 'で': 'デ', 'ど': 'ド',
-    'ば': 'バ', 'び': 'ビ', 'ぶ': 'ブ', 'べ': 'ベ', 'ぼ': 'ボ',
-    'ぱ': 'パ', 'ぴ': 'ピ', 'ぷ': 'プ', 'ぺ': 'ペ', 'ぽ': 'ポ',
-    'きゃ': 'キャ', 'きゅ': 'キュ', 'きょ': 'キョ',
-    'しゃ': 'シャ', 'しゅ': 'シュ', 'しょ': 'ショ',
-    'ちゃ': 'チャ', 'ちゅ': 'チュ', 'ちょ': 'チョ',
-    'にゃ': 'ニャ', 'にゅ': 'ニュ', 'にょ': 'ニョ',
-    'ひゃ': 'ヒャ', 'ひゅ': 'ヒュ', 'ひょ': 'ヒョ',
-    'みゃ': 'ミャ', 'みゅ': 'ミュ', 'みょ': 'ミョ',
-    'りゃ': 'リャ', 'りゅ': 'リュ', 'りょ': 'リョ', 'っ': 'ッ'
-}
-
-
-def hiragana_to_katakana(text):
-    return ''.join(hiragana_to_katakana_dict[char] for char in text)
 
 
 if __name__ == '__main__':
