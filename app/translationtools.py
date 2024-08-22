@@ -1,20 +1,16 @@
-import re
-
 from jisho_api.word import Word
 
 
-async def get_dictionary(search: str, previous_word: str, played_words: set['str'], on_fail) -> dict:
+async def get_dictionary(search: str, previous_word: str, played_words: set['str']) -> dict:
     """
     Uses the Jisho API to get a dictionary of words from the search term
     :param search: The search term
     :param previous_word: Previous word
     :param played_words: Played words
-    :param on_fail: Function to call if no words are found
     :return: Dictionary from readings to words
     """
     wr = Word.request(search)
     if not wr:
-        on_fail()
         return {}
 
     words = {}
@@ -32,9 +28,6 @@ async def get_dictionary(search: str, previous_word: str, played_words: set['str
                 words[reading].append(word_info)
             else:
                 words[reading] = [word_info]
-
-    if not words:
-        await on_fail()
 
     return words
 

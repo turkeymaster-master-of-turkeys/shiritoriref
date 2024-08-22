@@ -71,7 +71,7 @@ async def initiate_duel(
     current = challenger if challenged == bot.user else challenged
     previous_word = ""
     played_words = set()
-    lives = {challenger: 3, challenged: 3}
+    lives = {challenger.id: 3, challenged.id: 3}
 
     while True:
         logger.info(f"Lives: {lives}")
@@ -86,7 +86,7 @@ async def initiate_duel(
             else:
                 return
 
-        if lives[current] == 0:
+        if lives[current.id] == 0:
             await inter.channel.send(f"{current.mention} has lost all their lives. "
                                      f"{challenger if current == challenged else challenged} wins!")
             return
@@ -122,15 +122,15 @@ async def initiate_duel(
         logger.info(f"{current.display_name} played {hiragana}")
 
         if not hiragana:
-            lives[current] -= 1
+            lives[current.id] -= 1
             await inter.channel.send(f"{response.content.strip("\"")} is not a valid Romaji word."
-                                     f" You have {lives[current]} lives remaining.")
+                                     f" You have {lives[current.id]} lives remaining.")
             continue
 
         if hiragana in played_words:
-            lives[current] -= 1
+            lives[current.id] -= 1
             await inter.channel.send(f"{hiragana} has already been played."
-                                     f" You have {lives[current]} lives remaining.")
+                                     f" You have {lives[current.id]} lives remaining.")
             continue
 
         if previous_word and hiragana[0] != previous_word[-1]:
@@ -140,23 +140,23 @@ async def initiate_duel(
             if previous_word[-1] == 'ゃ' or previous_word[-1] == 'ゅ' or previous_word[-1] == 'ょ':
                 if previous_word[-2] == hiragana[0]:
                     pass
-            lives[current] -= 1
+            lives[current.id] -= 1
             await inter.channel.send(f"{hiragana} does not start with {previous_word[-1]}!"
-                                     f" You have {lives[current]} lives remaining.")
+                                     f" You have {lives[current.id]} lives remaining.")
             continue
 
         if hiragana[-1] == 'ん':
-            lives[current] -= 1
+            lives[current.id] -= 1
             await inter.channel.send(f"{hiragana} ends with ん!"
-                                     f" You have {lives[current]} lives remaining.")
+                                     f" You have {lives[current.id]} lives remaining.")
             continue
 
         async def on_fail():
-            lives[current] -= 1
+            lives[current.id] -= 1
             await inter.channel.send(f"{hiragana} is not a valid word."
-                                     f" You have {lives[current]} lives remaining.")
+                                     f" You have {lives[current.id]} lives remaining.")
 
-        words = await translationtools.get_dictionary(hiragana, previous_word, played_words, on_fail)
+        words = await translationtools.get_dictionary(hiragana, previous_word, played_words)
         katakana = hiragana_to_katakana(hiragana)
 
         if hiragana not in words and katakana not in words:
@@ -172,7 +172,8 @@ async def initiate_duel(
             if i >= len(matches):
                 break
             match = matches[i]
-            await inter.channel.send(f"{match['word']} ({hiragana}):\n> {', '.join(match['meanings'])}")
+            kanji = match['word'] or katakana
+            await inter.channel.send(f"{kanji} ({hiragana}):\n> {', '.join(match['meanings'])}")
 
         played_words.add(hiragana)
         previous_word = hiragana
