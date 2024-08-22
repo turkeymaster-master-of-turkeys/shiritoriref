@@ -2,6 +2,11 @@ import re
 
 
 def romaji_to_hiragana(word: str) -> str or None:
+    """
+    Converts a string to hiragana, returns None if it isn't valid romanji
+    :param word:
+    :return:
+    """
     i = 0
     hiragana_word = ""
     while i < len(word):
@@ -20,8 +25,15 @@ def romaji_to_hiragana(word: str) -> str or None:
 
     return hiragana_word
 
+
 def hiragana_to_katakana(text):
+    """
+    Converts hiragana to katakana
+    :param text:
+    :return:
+    """
     return ''.join(hiragana_to_katakana_dict[char] for char in text)
+
 
 romaji_to_hiragana_dict: dict[str, str] = {
     'a': 'あ', 'i': 'い', 'u': 'う', 'e': 'え', 'o': 'お',

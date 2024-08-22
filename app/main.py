@@ -1,4 +1,6 @@
 import asyncio
+import os
+import logging
 from jisho_api.word import Word
 import nextcord
 from nextcord.ext import commands
@@ -10,10 +12,12 @@ from app.translationtools import hiragana_to_katakana, romaji_to_hiragana
 intents = nextcord.Intents.all()
 bot = commands.Bot(intents=intents)
 
+logger = logging.getLogger()
+
 
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user}')
+    logger.info(f'Logged in as {bot.user}')
 
 
 @bot.slash_command(
@@ -30,7 +34,7 @@ async def duel(
                                             " Wrap your words in \" to submit in chat mode. Default: on",
                                 choices=["on", "off"], required=False)
 ):
-    print(f"{inter.user} challenged {user} to a duel in {mode} mode with chat {chat}.")
+    logger.info(f"{inter.user} challenged {user} to a duel in {mode} mode with chat {chat}.")
     if user == inter.user:
         await inter.response.send_message("You cannot duel yourself!", ephemeral=True)
         return
@@ -151,7 +155,7 @@ async def initiate_duel(
 
         hiragana = romaji_to_hiragana(response.content.strip("\""))
 
-        print(current.display_name, hiragana)
+        logger.info(current.display_name, hiragana)
 
         if not hiragana:
             lives[current] -= 1
@@ -227,4 +231,4 @@ async def initiate_duel(
 
 
 if __name__ == '__main__':
-    bot.run("")
+    bot.run(os.getenv("TOKEN"))
