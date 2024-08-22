@@ -11,6 +11,7 @@ from translationtools import hiragana_to_katakana, romaji_to_hiragana
 
 intents = nextcord.Intents.all()
 bot = commands.Bot(intents=intents)
+guilds = [643165990695206920, 931645765980393624]
 
 logger = logging.getLogger("shiritori-ref")
 logging.basicConfig(
@@ -31,7 +32,7 @@ async def on_ready():
 @bot.slash_command(
     name="duel",
     description="Challenge someone to a duel",
-    guild_ids=[643165990695206920, 931645765980393624],
+    guild_ids=guilds,
 )
 async def duel(
         inter: nextcord.Interaction,
@@ -60,13 +61,13 @@ async def duel(
 @bot.command(
     name="survive",
     description="Start a survival mode game",
-    guild_ids=[643165990695206920, 931645765980393624]
+    guild_ids=guilds
 )
 async def survival(
         inter: nextcord.Interaction,
         chat: str = SlashOption(description="Enable chatting during the game.")
 ):
-    await initiate_duel(inter, inter.user, inter.user, "Survival", chat)
+    await initiate_duel(inter, inter.user, inter.user, "survival", chat)
 
 
 async def initiate_duel(
@@ -83,13 +84,13 @@ async def initiate_duel(
     current = challenger if challenged == bot.user else challenged
     previous_word = ""
     played_words = set()
-    lives = {0: 3} if mode == "Survival" else {challenger.id: 3, challenged.id: 3}
+    lives = {0: 3} if mode == "survival" else {challenger.id: 3, challenged.id: 3}
 
     while True:
         logger.info(f"Lives: {lives}")
 
         def lose_life():
-            if mode == "Survival":
+            if mode == "survival":
                 lives[0] -= 1
             else:
                 lives[current.id] -= 1
@@ -105,7 +106,7 @@ async def initiate_duel(
                 return
 
         if lives[current.id] == 0:
-            if mode == "Survival":
+            if mode == "survival":
                 await inter.channel.send(f"You have lost all your lives! You survived for {streak} words.")
             else:
                 await inter.channel.send(f"{current.mention} has lost all their lives. "
@@ -125,14 +126,14 @@ async def initiate_duel(
             else:
                 await inter.channel.send(f"The streak is {streak}!")
 
-        if mode == "Survival":
+        if mode == "survival":
             await inter.channel.send(f"You have 60 seconds for the next word!")
         else:
             await inter.channel.send(f"{current.display_name}, your move!"
                                      f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
         try:
             def check(msg: nextcord.Message):
-                return (msg.author.id == current.id and msg.channel == inter.channel and
+                return ((mode != "survival" and msg.author.id == current.id) and msg.channel == inter.channel and
                         (chat != "on" or msg.content[0:2] == "> "))
 
             response: nextcord.Message = await bot.wait_for(
@@ -198,7 +199,7 @@ async def initiate_duel(
         played_words.add(hiragana)
         previous_word = hiragana
         streak += 1
-        if mode != "Survival":
+        if mode != "survival":
             current = challenger if current == challenged else challenged
 
 
