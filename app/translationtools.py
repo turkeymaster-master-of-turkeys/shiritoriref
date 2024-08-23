@@ -2,14 +2,19 @@ from jisho_api.word import Word
 
 
 def match_kana(prev: str, curr: str) -> bool:
-    l = prev[-1]
-    f = curr[0]
-    return not prev or l == f or \
-        ((l, f) == ('ぢ', 'じ')) or \
-        ((l, f) == ('づ', 'ず')) or \
-        (l == 'ゃ' and (f == 'や' or prev[-2] == f)) or \
-        (l == 'ゅ' and (f == 'ゆ' or prev[-2] == f)) or \
-        (l == 'ょ' and (f == 'よ' or prev[-2] == f))
+    p = normalise_hiragana(prev)
+    c = normalise_hiragana(curr)
+    for i in range(min(len(p), len(c))):
+        if p[len(p)-1-i:] == c[:i+1]:
+            return True
+    return False
+
+
+def normalise_hiragana(hiragana: str) -> str:
+    normal_map = {
+        'ぢ': 'じ', 'づ': 'ず', 'ゃ': 'や', 'ゅ': 'ゆ', 'ょ': 'よ'
+    }
+    return ''.join(normal_map.get(c, c) for c in hiragana)
 
 
 async def get_dictionary(search: str, previous_word: str, played_words: set['str']) -> dict:
