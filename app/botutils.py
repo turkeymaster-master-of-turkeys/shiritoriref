@@ -100,7 +100,8 @@ async def take_user_turn(
     if hiragana not in words and katakana not in words:
         return not await invalid_word(f"is not a valid word."), ""
 
-    matches = words[hiragana if hiragana in words else katakana]
+    matches = ((words[hiragana] if hiragana in words else []) +
+               (words[katakana] if katakana in words else []))
 
     for i in range(3):
         if i >= len(matches):

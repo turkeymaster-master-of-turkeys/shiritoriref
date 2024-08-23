@@ -33,8 +33,10 @@ async def get_dictionary(hira: str, kata: str, previous_word: str, played_words:
     if not wr1 and not wr2:
         return {}
 
+    dictionary = (wr1.dict()['data'] if wr1 else []) + (wr2.dict()['data'] if wr2 else [])
+
     words = {}
-    for x in wr1.dict()['data'] + wr2.dict()['data']:
+    for x in dictionary:
         for y in x['japanese']:
             reading = y['reading']
             if not reading or len(reading) <= 1:
