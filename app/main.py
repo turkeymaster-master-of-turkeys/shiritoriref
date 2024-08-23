@@ -47,7 +47,7 @@ async def duel(
         await initiate_duel(inter, [[inter.user], [user]], mode, chat)
         return
 
-    view = botutils.get_view(user, lambda: initiate_duel(inter, [[inter.user], [user]], mode, chat))
+    view = botutils.get_view(user, lambda: initiate_duel(inter, [[user], [inter.user]], mode, chat))
 
     await inter.response.send_message(
         f"{user.mention}, you have been challenged to a duel by {inter.user.mention}!", view=view)
@@ -78,12 +78,13 @@ async def initiate_duel(
 
     if mode == "survival":
         await inter.channel.send("Survival game started! You have 3 lives.")
-    elif teams[0][0] != bot.user:
-        await inter.channel.send(f"Please note: this is an experimental feature and may not function correctly.")
+    elif teams[1][0] != bot.user:
         await inter.channel.send(f"{botutils.team_to_string(teams[0])},"
                                  f" as the challenged, you have the right of the first word.")
+    else:
+        await inter.channel.send(f"Please note: this is an experimental feature and may not function correctly.")
 
-    current = teams[1] if teams[0][0] == bot.user else teams[0]
+    current = teams[0]
     previous_word = ""
     played_words = set()
     lives = {team[0].id: 3 for team in teams}

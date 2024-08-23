@@ -28,10 +28,9 @@ def get_view(user: nextcord.User, callback) -> nextcord.ui.view.View:
     # Callback function for declining the duel
     async def decline_callback(interaction: Interaction):
         if interaction.user != user:
-            await interaction.response.send_message("You cannot accept a duel for someone else!", ephemeral=True)
+            await interaction.response.send_message("You cannot decline a duel for someone else!", ephemeral=True)
             return
         await interaction.response.edit_message(content=f"{user.display_name} has declined the duel.", view=None)
-        await callback()
 
     accept_button.callback = accept_callback
     decline_button.callback = decline_callback
