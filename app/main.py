@@ -102,11 +102,13 @@ async def battle(
         return
 
     teams = [team for team in [team_1, team_2, team_3, team_4, team_5] if team]
+    t = team_1 + team_2 + team_3 + team_4 + team_5
+    t.pop(t.index(inter.user))
 
-    view = botutils.get_view(team_1, lambda: initiate_duel(inter, teams, mode, chat))
+    view = botutils.get_view(t, lambda: initiate_duel(inter, teams, mode, chat))
 
-    await inter.response.send_message(
-        f"{botutils.team_to_string(team_1)}, you have been challenged to a duel by {inter.user.mention}!", view=view)
+    await inter.response.send_message(f"{inter.user.mention} has started a battle!\n" +
+                                      " vs ".join([botutils.team_to_string(team) for team in teams]), view=view)
 
 
 async def initiate_duel(

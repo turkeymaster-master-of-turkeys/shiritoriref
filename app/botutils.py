@@ -22,7 +22,8 @@ def get_view(team: list[nextcord.User], callback) -> nextcord.ui.view.View:
         if interaction.user not in team:
             await interaction.response.send_message("You cannot accept a duel for someone else!", ephemeral=True)
             return
-        await interaction.response.edit_message(content=f"{team_to_string(team)} has accepted the duel!", view=None)
+        await interaction.response.edit_message(content=f"{team_to_string(team)} {"have" if len(team) > 1 else "has"}"
+                                                        f" accepted the duel!", view=None)
         await callback()
 
     # Callback function for declining the duel
@@ -30,7 +31,8 @@ def get_view(team: list[nextcord.User], callback) -> nextcord.ui.view.View:
         if interaction.user not in team:
             await interaction.response.send_message("You cannot decline a duel for someone else!", ephemeral=True)
             return
-        await interaction.response.edit_message(content=f"{team_to_string(team)} has declined the duel.", view=None)
+        await interaction.response.edit_message(content=f"{team_to_string(team)} {"have" if len(team) > 1 else "has"}"
+                                                        f" declined the duel.", view=None)
 
     accept_button.callback = accept_callback
     decline_button.callback = decline_callback
