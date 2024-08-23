@@ -81,7 +81,8 @@ async def take_user_turn(
     except asyncio.TimeoutError:
         if mode == "survival":
             await inter.channel.send(f"You took too long to respond. Game over! The streak was {len(played_words)}.")
-        await inter.channel.send(f"{current.mention} took too long to respond. You lose!")
+        else:
+            await inter.channel.send(f"{current.mention} took too long to respond. You lose!")
         return False, ""
 
     hiragana = translationtools.romanji_to_hiragana(response)
