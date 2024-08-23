@@ -19,20 +19,22 @@ def normalise_hiragana(hiragana: str) -> str:
     return ''.join(normal_map.get(c, c) for c in hiragana)
 
 
-async def get_dictionary(search: str, previous_word: str, played_words: set['str']) -> dict:
+async def get_dictionary(hira: str, kata: str, previous_word: str, played_words: set['str']) -> dict:
     """
     Uses the Jisho API to get a dictionary of words from the search term
-    :param search: The search term
+    :param hira: The hiragana term
+    :param kata: The katakana term
     :param previous_word: Previous word
     :param played_words: Played words
     :return: Dictionary from readings to words
     """
-    wr = Word.request(search)
-    if not wr:
+    wr1 = Word.request(hira)
+    wr2 = Word.request(kata)
+    if not wr1 and not wr2:
         return {}
 
     words = {}
-    for x in wr.dict()['data']:
+    for x in wr1.dict()['data'] + wr2.dict()['data']:
         for y in x['japanese']:
             reading = y['reading']
             if not reading or len(reading) <= 1:
