@@ -78,6 +78,10 @@ def romanji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str or N
     """
     i = 0
     kana_word = ""
+    for j in range(min(3, len(word) - i), 0, -1):
+        if word[i:i + j] in dictionary:
+            kana_word += dictionary[word[i:i + j]]
+            i += j
     while i < len(word):
         if i + 1 < len(word) and word[i] == word[i + 1]:
             kana_word += tsu  # Small tsu
