@@ -10,7 +10,7 @@ import translationtools
 logger = logging.getLogger("shiritori-ref")
 
 
-def get_view(user: nextcord.User, callback) -> nextcord.ui.view.View:
+def get_view(team: list[nextcord.User], callback) -> nextcord.ui.view.View:
     accept_button = Button(label="Accept", style=ButtonStyle.green)
     decline_button = Button(label="Decline", style=ButtonStyle.red)
 
@@ -19,18 +19,18 @@ def get_view(user: nextcord.User, callback) -> nextcord.ui.view.View:
     view.add_item(decline_button)
 
     async def accept_callback(interaction: Interaction) -> None:
-        if interaction.user != user:
+        if interaction.user not in team:
             await interaction.response.send_message("You cannot accept a duel for someone else!", ephemeral=True)
             return
-        await interaction.response.edit_message(content=f"{user.display_name} has accepted the duel!", view=None)
+        await interaction.response.edit_message(content=f"{team_to_string(team)} has accepted the duel!", view=None)
         await callback()
 
     # Callback function for declining the duel
     async def decline_callback(interaction: Interaction):
-        if interaction.user != user:
+        if interaction.user not in team:
             await interaction.response.send_message("You cannot decline a duel for someone else!", ephemeral=True)
             return
-        await interaction.response.edit_message(content=f"{user.display_name} has declined the duel.", view=None)
+        await interaction.response.edit_message(content=f"{team_to_string(team)} has declined the duel.", view=None)
 
     accept_button.callback = accept_callback
     decline_button.callback = decline_callback

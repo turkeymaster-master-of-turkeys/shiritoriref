@@ -35,7 +35,7 @@ async def duel(
         mode: str = SlashOption(description="The mode of the duel. Default: Normal",
                                 choices=["normal", "speed"], required=False),
         chat: str = SlashOption(description="Enable chatting during the duel."
-                                            " Wrap your words in \" to submit in chat mode. Default: on",
+                                            " Start words with \"> \" to submit in chat mode. Default: on",
                                 choices=["on", "off"], required=False)
 ):
     if user == inter.user:
@@ -47,7 +47,7 @@ async def duel(
         await initiate_duel(inter, [[inter.user], [user]], mode, chat)
         return
 
-    view = botutils.get_view(user, lambda: initiate_duel(inter, [[user], [inter.user]], mode, chat))
+    view = botutils.get_view([user], lambda: initiate_duel(inter, [[user], [inter.user]], mode, chat))
 
     await inter.response.send_message(
         f"{user.mention}, you have been challenged to a duel by {inter.user.mention}!", view=view)
@@ -64,6 +64,34 @@ async def survive(
 ):
     await inter.response.send_message("Let's start a survival game!")
     await initiate_duel(inter, [[inter.user]], "survival", chat)
+
+
+@bot.slash_command(
+    name="battle",
+    description="Challenge a team to a duel",
+    guild_ids=guilds,
+)
+async def battle(
+        inter: nextcord.Interaction,
+        team1: str = SlashOption(description="The first team", required=True),
+        team2: str = SlashOption(description="The second team", required=True),
+        mode: str = SlashOption(description="The mode of the duel. Default: Normal",
+                                choices=["normal", "speed"], required=False),
+        chat: str = SlashOption(description="Enable chatting during the duel."
+                                            " Start words with \"> \" to submit in chat mode. Default: on",
+                                choices=["on", "off"], required=False)
+):
+    team_1 = list(set(bot.parse_mentions(team1)))
+    team_2 = list(set(bot.parse_mentions(team2)))
+
+    if team_1 == team_2:
+        await inter.response.send_message("You cannot duel yourself!", ephemeral=True)
+        return
+
+    view = botutils.get_view(team_1, lambda: initiate_duel(inter, [team_1, team_2], mode, chat))
+
+    await inter.response.send_message(
+        f"{botutils.team_to_string(team_1)}, you have been challenged to a duel by {inter.user.mention}!", view=view)
 
 
 async def initiate_duel(
