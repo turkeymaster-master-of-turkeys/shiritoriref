@@ -12,13 +12,24 @@ def match_kana(prev: str, curr: str) -> bool:
     return False
 
 
-def normalise_katakana(hiragana: str) -> str:
+def normalise_katakana(katakana: str) -> str:
+    def choonpu_to_kana(kana: str) -> str:
+        return kana in set_a and 'ア' or \
+                kana in set_e and 'エ' or \
+                kana in set_i and 'イ' or \
+                kana in set_o and 'オ' or \
+                kana in set_u and 'ウ' or \
+                kana
+
+    kata = katakana[0]
+    for i in range(1, len(katakana)-1):
+        kata = kata + (katakana[i] if katakana[i] != 'ー' else choonpu_to_kana(katakana[i-1]))
     normal_map = {
         'ヂ': 'ジ', 'ヅ': 'ズ',
         'ャ': 'ヤ', 'ュ': 'ユ', 'ョ': 'ヨ',
         'ァ': 'ア', 'ィ': 'イ', 'ゥ': 'ウ', 'ェ': 'エ', 'ォ': 'オ'
     }
-    return ''.join(normal_map.get(c, c) for c in hiragana)
+    return ''.join(normal_map.get(c, c) for c in kata)
 
 
 async def get_dictionary(hira: str, kata: str, previous_word: str, played_words: set['str']) -> dict:
