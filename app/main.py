@@ -125,62 +125,17 @@ async def initiate_duel(
             else:
                 await inter.channel.send(f"The streak is {streak}!")
 
-        if mode == "survival":
-            await inter.channel.send(f"You have 60 seconds for the next word!")
-        else:
-            await inter.channel.send(f"{current.display_name}, your move!"
-                                     f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
-        try:
-            def check(msg: nextcord.Message):
-                return ((mode != "survival" and msg.author.id == current.id) and msg.channel == inter.channel and
-                        (chat != "on" or msg.content[0:2] == "> "))
-
-            response: nextcord.Message = await bot.wait_for(
+        async def wait_callback(check):
+            await bot.wait_for(
                 'message', timeout=15.0 if mode == "Speed" else 60.0, check=check)
-        except asyncio.TimeoutError:
-            await inter.channel.send(f"{current.mention} took too long to respond. You lose!")
+
+        (cont, hiragana) = (
+            botutils.take_user_turn(inter, current, mode, chat, previous_word, played_words, wait_callback, lose_life))
+
+        if not cont:
             return
-
-        hiragana = romaji_to_hiragana(response.content.strip("\""))
-
-        logger.info(f"{current.display_name} played {hiragana}")
-
         if not hiragana:
-            await lose_life(f"{response.content.strip("\"")} is not a valid Romaji word!")
             continue
-
-        if hiragana in played_words:
-            await lose_life(f"{hiragana} has already been played!")
-            continue
-
-        if not translationtools.match_kana(previous_word, hiragana):
-            await lose_life(f"{hiragana} does not start with {previous_word[-1]}!")
-            continue
-
-        if hiragana[-1] == 'ん':
-            await lose_life(f"{hiragana} ends with ん!")
-            continue
-
-        words = await translationtools.get_dictionary(hiragana, previous_word, played_words)
-        katakana = hiragana_to_katakana(hiragana)
-
-        logger.info(f"checking for {hiragana} or {katakana} in {words.keys()}")
-
-        if hiragana not in words and katakana not in words:
-            await lose_life(f"{hiragana} is not a valid word.")
-            continue
-
-        if hiragana in words:
-            matches = words[hiragana]
-        else:
-            matches = words[katakana]
-
-        for i in range(3):
-            if i >= len(matches):
-                break
-            match = matches[i]
-            kanji = match['word'] or katakana
-            await inter.channel.send(f"{kanji} ({hiragana}):\n> {', '.join(match['meanings'])}")
 
         played_words.add(hiragana)
         previous_word = hiragana
