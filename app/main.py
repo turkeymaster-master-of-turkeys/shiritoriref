@@ -1,13 +1,8 @@
-import asyncio
 import logging
-
 import nextcord
 from nextcord import SlashOption
 from nextcord.ext import commands
-
 import botutils
-import translationtools
-from translationtools import hiragana_to_katakana, romaji_to_hiragana
 
 intents = nextcord.Intents.all()
 bot = commands.Bot(intents=intents)
@@ -58,15 +53,16 @@ async def duel(
         f"{user.mention}, you have been challenged to a duel by {inter.user.mention}!", view=view)
 
 
-@bot.command(
+@bot.slash_command(
     name="survive",
     description="Start a survival mode game",
     guild_ids=guilds
 )
-async def survival(
+async def survive(
         inter: nextcord.Interaction,
-        chat: str = SlashOption(description="Enable chatting during the game.")
+        chat: str = SlashOption(description="Enable chatting during the game.", required=False)
 ):
+    await inter.response.send_message("Let's start a survival game!")
     await initiate_duel(inter, inter.user, inter.user, "survival", chat)
 
 
@@ -77,7 +73,9 @@ async def initiate_duel(
     chat = chat or "on"
     logger.info(f"{challenger} challenged {challenged} to a duel in {mode} mode with chat {chat}.")
 
-    if challenged != bot.user:
+    if mode == "survival":
+        await inter.channel.send("Survival game started! You have 3 lives.")
+    elif challenged != bot.user:
         await inter.channel.send(f"{challenged.display_name}, as the challenged, you have the right of the first word.")
 
     streak = 0
@@ -86,11 +84,23 @@ async def initiate_duel(
     played_words = set()
     lives = {0: 3} if mode == "survival" else {challenger.id: 3, challenged.id: 3}
 
+    async def wait_callback(check):
+        return await bot.wait_for(
+            'message', timeout=15.0 if mode == "Speed" else 60.0, check=check)
+
     while True:
-        logger.info(f"Lives: {lives}")
+        logger.info(f"Streak {streak}, Lives: {lives}")
+        current_id = 0 if mode == "survival" else current.id
+
+        if lives[current_id] == 0:
+            if mode == "survival":
+                await inter.channel.send(f"You have lost all your lives! You survived for {streak} words.")
+            else:
+                await inter.channel.send(f"{current.mention} has lost all their lives. "
+                                         f"{challenger if current == challenged else challenged} wins!")
+            return
 
         async def lose_life(message: str) -> None:
-            current_id = 0 if mode == "survival" else current.id
             lives[current_id] -= 1
             await inter.channel.send(f"{message} You have {lives[current_id]} lives remaining.")
 
@@ -103,14 +113,6 @@ async def initiate_duel(
                 continue
             else:
                 return
-
-        if lives[current.id] == 0:
-            if mode == "survival":
-                await inter.channel.send(f"You have lost all your lives! You survived for {streak} words.")
-            else:
-                await inter.channel.send(f"{current.mention} has lost all their lives. "
-                                         f"{challenger if current == challenged else challenged} wins!")
-            return
 
         if streak != 0 and streak % 5 == 0:
             if streak % 100 == 0:
@@ -125,12 +127,9 @@ async def initiate_duel(
             else:
                 await inter.channel.send(f"The streak is {streak}!")
 
-        async def wait_callback(check):
-            await bot.wait_for(
-                'message', timeout=15.0 if mode == "Speed" else 60.0, check=check)
-
-        (cont, hiragana) = (
-            botutils.take_user_turn(inter, current, mode, chat, previous_word, played_words, wait_callback, lose_life))
+        (cont, hiragana) = await botutils.take_user_turn(
+            inter, current, mode, chat, previous_word, played_words, wait_callback, lose_life
+        )
 
         if not cont:
             return

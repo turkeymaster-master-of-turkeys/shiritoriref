@@ -75,20 +75,20 @@ async def take_user_turn(
     try:
         def check(msg: nextcord.Message):
             return (msg.channel == inter.channel and
-                    (mode != "survival" and msg.author.id == current.id) and
-                    (chat != "on" or msg.content[0:2] == "> "))
+                    (mode == "survival" or msg.author.id == current.id) and
+                    (chat == "off" or msg.content[0:2] == "> "))
 
-        response: nextcord.Message = await wait_callback(check)
+        response: str = (await wait_callback(check)).content.strip("> ")
     except asyncio.TimeoutError:
         await inter.channel.send(f"{current.mention} took too long to respond. You lose!")
         return False, ""
 
-    hiragana = translationtools.romaji_to_hiragana(response.content.strip("\""))
+    hiragana = translationtools.romaji_to_hiragana(response)
 
-    logger.info(f"{current.display_name} played {hiragana}")
+    logger.info(f"{current.display_name} played {response}")
 
     if not hiragana:
-        await lose_life(f"{response.content.strip("\"")} is not a valid Romaji word!")
+        await lose_life(f"{response} is not a valid Romaji word!")
         return True, ""
 
     if hiragana in played_words:

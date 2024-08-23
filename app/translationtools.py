@@ -2,6 +2,8 @@ from jisho_api.word import Word
 
 
 def match_kana(prev: str, curr: str) -> bool:
+    if not prev:
+        return True
     p = normalise_hiragana(prev)
     c = normalise_hiragana(curr)
     for i in range(min(len(p), len(c))):
