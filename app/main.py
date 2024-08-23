@@ -107,8 +107,9 @@ async def battle(
 
     view = botutils.get_view(t, lambda: initiate_duel(inter, teams, mode, chat))
 
-    await inter.response.send_message(f"{inter.user.mention} has started a battle!\n" +
-                                      " vs ".join([botutils.team_to_string(team) for team in teams]), view=view)
+    await inter.response.send_message(f"{inter.user.display_name} has requested a battle!\n" +
+                                      " vs ".join([botutils.team_to_string(team, mention=True) for team in teams]),
+                                      view=view)
 
 
 async def initiate_duel(
