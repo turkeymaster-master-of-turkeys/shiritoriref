@@ -20,15 +20,15 @@ def match_kana(prev: str, curr: str) -> bool:
 def normalise_katakana(katakana: str) -> str:
     def choonpu_to_kana(kana: str) -> str:
         return kana in set_a and 'ア' or \
-                kana in set_e and 'エ' or \
-                kana in set_i and 'イ' or \
-                kana in set_o and 'オ' or \
-                kana in set_u and 'ウ' or \
-                kana
+            kana in set_e and 'エ' or \
+            kana in set_i and 'イ' or \
+            kana in set_o and 'オ' or \
+            kana in set_u and 'ウ' or \
+            kana
 
     kata = katakana[0]
     for i in range(1, len(katakana)):
-        kata = kata + (katakana[i] if katakana[i] != 'ー' else choonpu_to_kana(katakana[i-1]))
+        kata = kata + (katakana[i] if katakana[i] != 'ー' else choonpu_to_kana(katakana[i - 1]))
     normal_map = {
         'ヂ': 'ジ', 'ヅ': 'ズ',
         'ャ': 'ヤ', 'ュ': 'ユ', 'ョ': 'ヨ',
@@ -131,6 +131,10 @@ def romaji_to_katakana(word: str) -> str or None:
     return katakana
 
 
+def katakana_to_romanji(kata: str) -> str:
+    return ''.join([katakana_to_romanji_dict.get(k, k) for k in kata])
+
+
 romaji_to_hiragana_dict: dict[str, str] = {
     'a': 'あ', 'i': 'い', 'u': 'う', 'e': 'え', 'o': 'お',
     'ka': 'か', 'ki': 'き', 'ku': 'く', 'ke': 'け', 'ko': 'こ',
@@ -196,6 +200,8 @@ romaji_to_katakana_dict: dict[str, str] = {
     'je': 'ジェ', 'she': 'シェ', 'che': 'チェ',
     'tsa': 'ツァ', 'tsi': 'ツィ', 'tse': 'ツェ', 'tso': 'ツォ'
 }
+
+katakana_to_romanji_dict = {v: k for k, v in romaji_to_katakana_dict.items()}
 
 set_a = {'ア', 'カ', 'サ', 'タ', 'ナ', 'ハ', 'マ', 'ヤ', 'ラ', 'ワ', 'ガ', 'ザ', 'ダ', 'バ', 'パ'}
 set_i = {'イ', 'キ', 'シ', 'チ', 'ニ', 'ヒ', 'ミ', 'リ', 'ギ', 'ジ', 'ヂ', 'ビ', 'ピ', 'ィ'}

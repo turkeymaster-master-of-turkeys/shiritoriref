@@ -156,7 +156,7 @@ async def initiate_duel(
                 teams.pop(index)
                 current = teams[index % len(teams)]
                 if len(teams) == 1:
-                    await inter.channel.send(f"{botutils.team_to_string(teams[0])} has won!")
+                    await inter.channel.send(f"{botutils.team_to_string(teams[0], mention=True)} has won!")
                     return
 
         async def lose_life(message: str) -> None:
@@ -195,7 +195,7 @@ async def initiate_duel(
             teams.pop(index)
             current = teams[index % len(teams)]
             if len(teams) == 1:
-                await inter.channel.send(f"{botutils.team_to_string(teams[0])} has won!")
+                await inter.channel.send(f"{botutils.team_to_string(teams[0], mention=True)} has won!")
                 return
             continue
         if not played_kata:

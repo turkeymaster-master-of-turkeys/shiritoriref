@@ -73,6 +73,11 @@ async def take_user_turn(
     else:
         await inter.channel.send(f"{team_to_string(current)}, your move!"
                                  f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
+    await inter.channel.send(
+        f"The word was {prev_hira or prev_kata} ({translationtools.katakana_to_romanji(prev_kata)})\n"
+        f" The letter to start is:"
+        f" {prev_hira[-1] if prev_hira else prev_kata[-1]} ({translationtools.katakana_to_romanji(prev_kata[-1])})")
+
     try:
         def check(msg: nextcord.Message):
             return (msg.channel == inter.channel and msg.author in current and
@@ -102,7 +107,7 @@ async def take_user_turn(
     logger.info(f"checking for {hiragana} or {katakana} in {words.keys()}")
 
     if hiragana not in words and katakana not in words:
-        return not await invalid_word(f"is not a valid word."), ""
+        return not await invalid_word(f"is not a valid word."), "", ""
 
     matches = ((words[hiragana] if hiragana in words else []) +
                (words[katakana] if katakana in words else []))
