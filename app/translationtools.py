@@ -4,6 +4,7 @@ from jisho_api.word import Word
 
 logger = logging.getLogger("shiritori-ref")
 
+
 def match_kana(prev: str, curr: str) -> bool:
     if not prev:
         return True

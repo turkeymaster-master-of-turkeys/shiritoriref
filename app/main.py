@@ -78,7 +78,6 @@ async def initiate_duel(
     elif challenged != bot.user:
         await inter.channel.send(f"{challenged.display_name}, as the challenged, you have the right of the first word.")
 
-    streak = 0
     current = challenger if challenged == bot.user else challenged
     previous_word = ""
     played_words = set()
@@ -89,6 +88,7 @@ async def initiate_duel(
             'message', timeout=15.0 if mode == "Speed" else 60.0, check=check)
 
     while True:
+        streak = len(played_words)
         logger.info(f"Streak {streak}, Lives: {lives}")
         current_id = 0 if mode == "survival" else current.id
 
@@ -127,18 +127,17 @@ async def initiate_duel(
             else:
                 await inter.channel.send(f"The streak is {streak}!")
 
-        (cont, hiragana) = await botutils.take_user_turn(
+        (cont, played_word) = await botutils.take_user_turn(
             inter, current, mode, chat, previous_word, played_words, wait_callback, lose_life
         )
 
         if not cont:
             return
-        if not hiragana:
+        if not played_word:
             continue
 
-        played_words.add(hiragana)
-        previous_word = hiragana
-        streak += 1
+        played_words.add(played_word)
+        previous_word = played_word
         if mode != "survival":
             current = challenger if current == challenged else challenged
 
