@@ -131,7 +131,8 @@ async def initiate_duel(
         await inter.channel.send(f"Please note: this is an experimental feature and may not function correctly.")
 
     current = teams[0]
-    previous_word = ""
+    prev_kata = ""
+    prev_hira = ""
     played_words = set()
     lives = {team[0].id: 3 for team in teams}
 
@@ -163,10 +164,10 @@ async def initiate_duel(
             await inter.channel.send(f"{message} You have {lives[current_id]} lives remaining.")
 
         if current == bot.user:
-            played_word = await botutils.take_bot_turn(inter, previous_word)
+            played_word = await botutils.take_bot_turn(inter, prev_kata)
             if played_word:
                 played_words.add(played_word)
-                previous_word = played_word
+                prev_kata = played_word
                 current = teams[(teams.index(current) + 1) % len(teams)]
                 continue
             else:
@@ -185,8 +186,8 @@ async def initiate_duel(
             else:
                 await inter.channel.send(f"The streak is {streak}!")
 
-        (cont, played_word) = await botutils.take_user_turn(
-            inter, current, mode, chat, previous_word, played_words, wait_callback, lose_life
+        (cont, played_kata, played_hira) = await botutils.take_user_turn(
+            inter, current, mode, chat, prev_kata, prev_hira, played_words, wait_callback, lose_life
         )
 
         if not cont:
@@ -197,11 +198,12 @@ async def initiate_duel(
                 await inter.channel.send(f"{botutils.team_to_string(teams[0])} has won!")
                 return
             continue
-        if not played_word:
+        if not played_kata:
             continue
 
-        played_words.add(played_word)
-        previous_word = played_word
+        played_words.add(played_kata)
+        prev_kata = played_kata
+        prev_hira = played_hira
         current = teams[(teams.index(current) + 1) % len(teams)]
 
 

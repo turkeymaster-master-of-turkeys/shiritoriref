@@ -62,11 +62,12 @@ async def take_user_turn(
         inter: nextcord.Interaction,
         current: list[nextcord.User],
         mode: str, chat: str,
-        previous_word: str,
+        prev_kata: str,
+        prev_hira: str,
         played_words: set[str],
         wait_callback,
         lose_life,
-) -> (bool, str):
+) -> (bool, str, str):
     if mode == "survival":
         await inter.channel.send(f"You have 60 seconds for the next word!")
     else:
@@ -83,7 +84,7 @@ async def take_user_turn(
             await inter.channel.send(f"You took too long to respond. Game over! The streak was {len(played_words)}.")
         else:
             await inter.channel.send(f"{team_to_string(current, mention=True)} took too long to respond. You lose!")
-        return False, ""
+        return False, "", ""
 
     hiragana = translationtools.romanji_to_hiragana(response)
     katakana = translationtools.romaji_to_katakana(response)
@@ -94,8 +95,8 @@ async def take_user_turn(
         await lose_life(f"{(hiragana if hiragana else katakana) or response} {reason}")
         return False
 
-    if not await check_valid_word(katakana, previous_word, played_words, invalid_word):
-        return True, ""
+    if not await check_valid_word(katakana, hiragana, prev_kata, prev_hira, played_words, invalid_word):
+        return True, "", ""
 
     words = await translationtools.get_dictionary(hiragana, katakana)
     logger.info(f"checking for {hiragana} or {katakana} in {words.keys()}")
@@ -113,17 +114,19 @@ async def take_user_turn(
         kanji = match['word'] or katakana
         reading = f" ({hiragana})" if hiragana else ""
         await inter.channel.send(f"{kanji}{reading}:\n> {', '.join(match['meanings'])}")
-    return True, katakana
+    return True, katakana, hiragana
 
 
-async def check_valid_word(katakana: str, previous_word: str, played_words: set[str], invalid_word) -> bool:
-    if not katakana:
+async def check_valid_word(
+        kata: str, hira: str, prev_kata: str, prev_hira: str, played_words: set[str], invalid_word
+) -> bool:
+    if not kata:
         return await invalid_word("is not a valid Romaji word!")
-    if katakana in played_words:
+    if kata in played_words:
         return await invalid_word("has already been played!")
-    if not translationtools.match_kana(previous_word, katakana):
+    if not translationtools.match_kana(prev_kata, kata) and not translationtools.match_kana(prev_hira, hira):
         return await invalid_word("does not match the previous word!")
-    if katakana[-1] == 'ン':
+    if kata[-1] == 'ン':
         return await invalid_word("ends with ん!")
     return True
 
