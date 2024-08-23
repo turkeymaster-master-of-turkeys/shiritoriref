@@ -75,6 +75,9 @@ async def battle(
         inter: nextcord.Interaction,
         team1: str = SlashOption(description="The first team", required=True),
         team2: str = SlashOption(description="The second team", required=True),
+        team3: str = SlashOption(description="The third team", required=False),
+        team4: str = SlashOption(description="The fourth team", required=False),
+        team5: str = SlashOption(description="The fifth team", required=False),
         mode: str = SlashOption(description="The mode of the duel. Default: Normal",
                                 choices=["normal", "speed"], required=False),
         chat: str = SlashOption(description="Enable chatting during the duel."
@@ -83,12 +86,17 @@ async def battle(
 ):
     team_1 = list(set(bot.parse_mentions(team1)))
     team_2 = list(set(bot.parse_mentions(team2)))
+    team_3 = list(set(bot.parse_mentions(team3))) if team3 else []
+    team_4 = list(set(bot.parse_mentions(team4))) if team4 else []
+    team_5 = list(set(bot.parse_mentions(team5))) if team5 else []
 
-    if team_1 == team_2:
-        await inter.response.send_message("You cannot duel yourself!", ephemeral=True)
+    if len(team_1 + team_2 + team_3 + team_4 + team_5) != len(set(team_1 + team_2 + team_3 + team_4 + team_5)):
+        await inter.response.send_message("The same person cannot be in multiple teams!", ephemeral=True)
         return
 
-    view = botutils.get_view(team_1, lambda: initiate_duel(inter, [team_1, team_2], mode, chat))
+    teams = [team for team in [team_1, team_2, team_3, team_4, team_5] if team]
+
+    view = botutils.get_view(team_1, lambda: initiate_duel(inter, teams, mode, chat))
 
     await inter.response.send_message(
         f"{botutils.team_to_string(team_1)}, you have been challenged to a duel by {inter.user.mention}!", view=view)
