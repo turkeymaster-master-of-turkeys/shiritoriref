@@ -91,7 +91,7 @@ async def take_user_turn(
     logger.info(f"{team_to_string(current)} played {response}")
 
     async def invalid_word(reason: str):
-        await lose_life(f"{hiragana if hiragana else katakana} {reason}")
+        await lose_life(f"{(hiragana if hiragana else katakana) or response} {reason}")
         return False
 
     if not await check_valid_word(katakana, previous_word, played_words, invalid_word):
