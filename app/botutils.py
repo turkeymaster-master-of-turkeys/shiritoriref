@@ -72,8 +72,7 @@ async def take_user_turn(
                                  f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
     try:
         def check(msg: nextcord.Message):
-            return (msg.channel == inter.channel and
-                    (mode == "survival" or msg.author in current) and
+            return (msg.channel == inter.channel and msg.author in current and
                     (chat == "off" or msg.content[0:2] == "> "))
 
         response: str = (await wait_callback(check)).content.strip("> ")

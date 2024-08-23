@@ -60,10 +60,12 @@ async def duel(
 )
 async def survive(
         inter: nextcord.Interaction,
+        players: str = SlashOption(description="The players in the game", required=False),
         chat: str = SlashOption(description="Enable chatting during the game.", required=False)
 ):
+    players = list(set(bot.parse_mentions(players) + [inter.user])) if players else [inter.user]
     await inter.response.send_message("Let's start a survival game!")
-    await initiate_duel(inter, [[inter.user]], "survival", chat)
+    await initiate_duel(inter, [players], "survival", chat)
 
 
 @bot.slash_command(
@@ -113,7 +115,7 @@ async def initiate_duel(
                     f" to a duel in {mode} mode with chat {chat}.")
 
     if mode == "survival":
-        await inter.channel.send("Survival game started! You have 3 lives.")
+        await inter.channel.send(f"Survival game started! {botutils.team_to_string(teams[0])}, you have 3 lives.")
     elif teams[1][0] != bot.user:
         await inter.channel.send(f"{botutils.team_to_string(teams[0])},"
                                  f" as the challenged, you have the right of the first word.")
@@ -135,7 +137,8 @@ async def initiate_duel(
 
         if lives[current_id] == 0:
             if mode == "survival":
-                await inter.channel.send(f"You have lost all your lives! You survived for {streak} words.")
+                await inter.channel.send(f"You have lost all your lives! {botutils.team_to_string(current)},"
+                                         f" you survived for {streak} words.")
                 return
             else:
                 await inter.channel.send(f"{botutils.team_to_string(current)} {"have" if len(current) > 1 else "has"}"
