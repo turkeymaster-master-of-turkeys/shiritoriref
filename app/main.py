@@ -151,7 +151,9 @@ async def initiate_duel(
             else:
                 await inter.channel.send(f"{botutils.team_to_string(current)} {"have" if len(current) > 1 else "has"}"
                                          f" lost all their lives. ")
-                teams.pop(teams.index(current))
+                index = teams.index(current)
+                teams.pop(index)
+                current = teams[index % len(teams)]
                 if len(teams) == 1:
                     await inter.channel.send(f"{botutils.team_to_string(teams[0])} has won!")
                     return
@@ -188,7 +190,13 @@ async def initiate_duel(
         )
 
         if not cont:
-            return
+            index = teams.index(current)
+            teams.pop(index)
+            current = teams[index % len(teams)]
+            if len(teams) == 1:
+                await inter.channel.send(f"{botutils.team_to_string(teams[0])} has won!")
+                return
+            continue
         if not played_word:
             continue
 
