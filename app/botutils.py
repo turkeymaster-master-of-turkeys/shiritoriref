@@ -78,7 +78,7 @@ async def take_user_turn(
             return (msg.channel == inter.channel and msg.author in current and
                     (chat == "off" or msg.content[0:2] == "> "))
 
-        response: str = (await wait_callback(check)).content.strip("> ")
+        response: str = (await wait_callback(check)).content.strip("> ").lower()
     except asyncio.TimeoutError:
         if mode == "survival":
             await inter.channel.send(f"You took too long to respond. Game over! The streak was {len(played_words)}.")
