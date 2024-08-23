@@ -39,7 +39,7 @@ def get_view(user: nextcord.User, callback) -> nextcord.ui.view.View:
     return view
 
 
-async def take_bot_turn(inter: nextcord.Interaction, previous_word: str, played_words: set[str]) -> str:
+async def take_bot_turn(inter: nextcord.Interaction, previous_word: str) -> str:
     await inter.channel.send(f"My turn!")
 
     hira = translationtools.romanji_to_hiragana(previous_word)
@@ -59,7 +59,7 @@ async def take_bot_turn(inter: nextcord.Interaction, previous_word: str, played_
 
 async def take_user_turn(
         inter: nextcord.Interaction,
-        current: nextcord.User,
+        current: list[nextcord.User],
         mode: str, chat: str,
         previous_word: str,
         played_words: set[str],
@@ -69,12 +69,12 @@ async def take_user_turn(
     if mode == "survival":
         await inter.channel.send(f"You have 60 seconds for the next word!")
     else:
-        await inter.channel.send(f"{current.display_name}, your move!"
+        await inter.channel.send(f"{team_to_string(current)}, your move!"
                                  f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
     try:
         def check(msg: nextcord.Message):
             return (msg.channel == inter.channel and
-                    (mode == "survival" or msg.author.id == current.id) and
+                    (mode == "survival" or msg.author in current) and
                     (chat == "off" or msg.content[0:2] == "> "))
 
         response: str = (await wait_callback(check)).content.strip("> ")
@@ -82,13 +82,13 @@ async def take_user_turn(
         if mode == "survival":
             await inter.channel.send(f"You took too long to respond. Game over! The streak was {len(played_words)}.")
         else:
-            await inter.channel.send(f"{current.mention} took too long to respond. You lose!")
+            await inter.channel.send(f"{team_to_string(current, mention=True)} took too long to respond. You lose!")
         return False, ""
 
     hiragana = translationtools.romanji_to_hiragana(response)
     katakana = translationtools.romaji_to_katakana(response)
 
-    logger.info(f"{current.display_name} played {response}")
+    logger.info(f"{team_to_string(current)} played {response}")
 
     async def invalid_word(reason: str):
         await lose_life(f"{hiragana if hiragana else katakana} {reason}")
@@ -126,3 +126,9 @@ async def check_valid_word(katakana: str, previous_word: str, played_words: set[
     if katakana[-1] == 'ン':
         return await invalid_word("ends with ん!")
     return True
+
+
+def team_to_string(team: list[nextcord.User], mention=False) -> str:
+    return (", ".join([user.mention if mention else user.display_name for user in team[:len(team)-1]]) +
+            f" and {team[-1].mention if mention else team[-1].display_name}") if len(team) > 1 else (
+        team[0].mention if mention else team[0].display_name)
