@@ -110,7 +110,8 @@ async def take_user_turn(
             break
         match = matches[i]
         kanji = match['word'] or katakana
-        await inter.channel.send(f"{kanji} ({hiragana}):\n> {', '.join(match['meanings'])}")
+        reading = f" ({hiragana})" if hiragana else ""
+        await inter.channel.send(f"{kanji}{reading}:\n> {', '.join(match['meanings'])}")
     return True, katakana
 
 

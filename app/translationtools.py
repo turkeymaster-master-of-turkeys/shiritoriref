@@ -27,7 +27,7 @@ def normalise_katakana(katakana: str) -> str:
                 kana
 
     kata = katakana[0]
-    for i in range(1, len(katakana)-1):
+    for i in range(1, len(katakana)):
         kata = kata + (katakana[i] if katakana[i] != 'ー' else choonpu_to_kana(katakana[i-1]))
     normal_map = {
         'ヂ': 'ジ', 'ヅ': 'ズ',
