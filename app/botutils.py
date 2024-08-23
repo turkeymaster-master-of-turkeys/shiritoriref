@@ -44,7 +44,7 @@ async def take_bot_turn(inter: nextcord.Interaction, previous_word: str, played_
 
     hira = translationtools.romanji_to_hiragana(previous_word)
     kata = translationtools.romaji_to_katakana(previous_word)
-    words = await translationtools.get_dictionary(hira[-1], kata[-1], previous_word, played_words)
+    words = await translationtools.get_dictionary(hira[-1], kata[-1])
     if not words:
         return ""
 
@@ -94,8 +94,7 @@ async def take_user_turn(
     if not await check_valid_word(katakana, previous_word, played_words, invalid_word):
         return True, ""
 
-    words = await translationtools.get_dictionary(hiragana, katakana, previous_word, played_words)
-
+    words = await translationtools.get_dictionary(hiragana, katakana)
     logger.info(f"checking for {hiragana} or {katakana} in {words.keys()}")
 
     if hiragana not in words and katakana not in words:

@@ -1,11 +1,15 @@
+import logging
+
 from jisho_api.word import Word
 
+logger = logging.getLogger("shiritori-ref")
 
 def match_kana(prev: str, curr: str) -> bool:
     if not prev:
         return True
     p = normalise_katakana(prev)
     c = normalise_katakana(curr)
+    logger.info(f"Matching {p} with {c}")
     for i in range(min(len(p), len(c))):
         if p[len(p) - 1 - i:] == c[:i + 1]:
             return True
@@ -32,13 +36,11 @@ def normalise_katakana(katakana: str) -> str:
     return ''.join(normal_map.get(c, c) for c in kata)
 
 
-async def get_dictionary(hira: str, kata: str, previous_word: str, played_words: set['str']) -> dict:
+async def get_dictionary(hira: str, kata: str) -> dict:
     """
     Uses the Jisho API to get a dictionary of words from the search term
     :param hira: The hiragana term
     :param kata: The katakana term
-    :param previous_word: Previous word
-    :param played_words: Played words
     :return: Dictionary from readings to words
     """
     wr1 = Word.request(hira) if hira else None
@@ -53,8 +55,6 @@ async def get_dictionary(hira: str, kata: str, previous_word: str, played_words:
         for y in x['japanese']:
             reading = y['reading']
             if not reading or len(reading) <= 1:
-                continue
-            if (previous_word and reading[0] != previous_word[-1]) or reading[-1] == 'ん' or reading in played_words:
                 continue
             word_info = {'word': y['word'],
                          'meanings': [sense['english_definitions'][0] for sense in x['senses']]}
