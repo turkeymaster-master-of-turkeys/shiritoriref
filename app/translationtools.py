@@ -5,8 +5,8 @@ logger = logging.getLogger("shiritori-ref")
 
 
 def match_kana(prev: str, curr: str) -> bool:
-    if not prev:
-        return True
+    if not prev or not curr:
+        return False
     p = normalise_katakana(prev)
     c = normalise_katakana(curr)
     logger.info(f"Matching {p} with {c}")
@@ -109,7 +109,7 @@ def romanji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str or N
 
 
 def romanji_to_hiragana(word) -> str or None:
-    return romanji_to_kana(word, romaji_to_hiragana_dict, 'っ')
+    return romanji_to_kana(word, romanji_to_hiragana_dict, 'っ')
 
 
 def romanji_to_katakana(word: str) -> str or None:
@@ -118,7 +118,7 @@ def romanji_to_katakana(word: str) -> str or None:
     :param word: The word to convert
     :return: The katakana word
     """
-    kata = romanji_to_kana(word, romaji_to_katakana_dict, 'ッ')
+    kata = romanji_to_kana(word, romanji_to_katakana_dict, 'ッ')
     if not kata:
         return None
 
@@ -171,7 +171,7 @@ def hiragana_to_katakana(hira: str) -> str:
     return romanji_to_katakana(hiragana_to_romanji(hira))
 
 
-romaji_to_hiragana_dict: dict[str, str] = {
+romanji_to_hiragana_dict: dict[str, str] = {
     'a': 'あ', 'i': 'い', 'u': 'う', 'e': 'え', 'o': 'お',
     'ka': 'か', 'ki': 'き', 'ku': 'く', 'ke': 'け', 'ko': 'こ',
     'sa': 'さ', 'shi': 'し', 'su': 'す', 'se': 'せ', 'so': 'そ',
@@ -201,7 +201,7 @@ romaji_to_hiragana_dict: dict[str, str] = {
     'pya': 'ぴゃ', 'pyu': 'ぴゅ', 'pyo': 'ぴょ'
 }
 
-romaji_to_katakana_dict: dict[str, str] = {
+romanji_to_katakana_dict: dict[str, str] = {
     'a': 'ア', 'i': 'イ', 'u': 'ウ', 'e': 'エ', 'o': 'オ',
     'ka': 'カ', 'ki': 'キ', 'ku': 'ク', 'ke': 'ケ', 'ko': 'コ',
     'sa': 'サ', 'shi': 'シ', 'su': 'ス', 'se': 'セ', 'so': 'ソ',
@@ -237,8 +237,8 @@ romaji_to_katakana_dict: dict[str, str] = {
     'tsa': 'ツァ', 'tsi': 'ツィ', 'tse': 'ツェ', 'tso': 'ツォ'
 }
 
-katakana_to_romanji_dict = {v: k for k, v in romaji_to_katakana_dict.items()}
-hiragana_to_romanji_dict = {v: k for k, v in romaji_to_hiragana_dict.items()}
+katakana_to_romanji_dict = {v: k for k, v in romanji_to_katakana_dict.items()}
+hiragana_to_romanji_dict = {v: k for k, v in romanji_to_hiragana_dict.items()}
 
 set_a = {'ア', 'カ', 'サ', 'タ', 'ナ', 'ハ', 'マ', 'ヤ', 'ラ', 'ワ', 'ガ', 'ザ', 'ダ', 'バ', 'パ'}
 set_i = {'イ', 'キ', 'シ', 'チ', 'ニ', 'ヒ', 'ミ', 'リ', 'ギ', 'ジ', 'ヂ', 'ビ', 'ピ', 'ィ'}

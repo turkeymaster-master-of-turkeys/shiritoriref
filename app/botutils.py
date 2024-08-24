@@ -148,6 +148,8 @@ async def take_user_turn(
 async def check_valid_word(
         kata: str, hira: str, prev_kata: str, prev_hira: str, played_words: set[str], invalid_word
 ) -> bool:
+    if not prev_kata and not prev_hira:
+        return True
     if not kata:
         return await invalid_word("is not a valid Romaji word!")
     if kata in played_words:
