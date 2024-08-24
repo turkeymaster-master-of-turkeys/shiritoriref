@@ -154,6 +154,18 @@ def kana_to_romanji(kana: str, dictionary: dict) -> str:
         elif kana[i] in dictionary:
             romanji += dictionary[kana[i]]
             i += 1
+        elif kana[i] in 'っッ':
+            if i + 1 < len(kana) and kana[i + 1] in dictionary:
+                romanji += dictionary[kana[i + 1]][0]
+                i += 1
+            else:
+                return ""
+        elif kana[i] == 'ー':
+            if i > 0 and kana[i - 1] in dictionary:
+                romanji += dictionary[kana[i - 1]][-1]
+            elif i > 0 and kana[i - 2:i] in dictionary:
+                romanji += dictionary[kana[i - 2:i]][-1]
+            i += 1
         else:
             return ""
     return romanji
