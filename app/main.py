@@ -38,10 +38,10 @@ async def duel(
         inter: nextcord.Interaction,
         user: nextcord.User = SlashOption(description="The person you want to duel", required=True),
         mode: str = SlashOption(description="The mode of the duel. Default: Normal",
-                                choices=["normal", "speed"], required=False),
+                                choices=["normal", "speed"], required=False, default="normal"),
         chat: str = SlashOption(description="Enable chatting during the duel."
                                             " Start words with \"> \" to submit in chat mode. Default: on",
-                                choices=["on", "off"], required=False)
+                                choices=["on", "off"], required=False, default="on")
 ):
     if user == inter.user:
         await inter.response.send_message("You cannot duel yourself!", ephemeral=True)
@@ -66,11 +66,12 @@ async def duel(
 async def survive(
         inter: nextcord.Interaction,
         players: str = SlashOption(description="The players in the game", required=False),
-        vs_ref: bool = SlashOption(description="Play against the bot. default: true", required=False),
+        vs_ref: bool = SlashOption(description="Play against the bot. default: true", required=False, default=True),
         chat: str = SlashOption(description="Enable chatting during the game.", required=False)
 ):
     players = list(set(bot.parse_mentions(players) + [inter.user])) if players else [inter.user]
     if vs_ref:
+        await inter.response.send_message("Let's practice shiritori!")
         await initiate_duel(inter, [players, [bot.user]], "normal", chat)
     else:
         await inter.response.send_message("Let's start a survival game!")
@@ -90,10 +91,10 @@ async def battle(
         team4: str = SlashOption(description="The fourth team", required=False),
         team5: str = SlashOption(description="The fifth team", required=False),
         mode: str = SlashOption(description="The mode of the duel. Default: Normal",
-                                choices=["normal", "speed"], required=False),
+                                choices=["normal", "speed"], required=False, default="normal"),
         chat: str = SlashOption(description="Enable chatting during the duel."
                                             " Start words with \"> \" to submit in chat mode. Default: on",
-                                choices=["on", "off"], required=False)
+                                choices=["on", "off"], required=False, default="on")
 ):
     team_1 = list(set(bot.parse_mentions(team1)))
     team_2 = list(set(bot.parse_mentions(team2)))
@@ -127,9 +128,6 @@ async def battle(
 async def initiate_duel(
         inter: nextcord.Interaction, teams: list[list[nextcord.User]], mode, chat
 ):
-    mode = mode or "normal"
-    chat = chat or "on"
-
     if mode in ["normal", "speed"]:
         logger.info(f"{botutils.team_to_string(teams[0])} challenged {teams[1]}"
                     f" to a duel in {mode} mode with chat {chat}.")
