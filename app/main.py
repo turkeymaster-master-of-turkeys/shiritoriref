@@ -105,6 +105,11 @@ async def battle(
     t = team_1 + team_2 + team_3 + team_4 + team_5
     t.pop(t.index(inter.user))
 
+    if bot.user in t and len(t) == 2 and inter.user in t:
+        await inter.response.send_message("Lets practice Shiritori!")
+        await initiate_duel(inter, teams, mode, chat)
+        return
+
     view = botutils.get_view(t, lambda: initiate_duel(inter, teams, mode, chat))
 
     await inter.response.send_message(f"{inter.user.display_name} has requested a battle!\n" +

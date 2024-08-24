@@ -45,6 +45,9 @@ async def take_bot_turn(
         prev_hira: str, prev_kata: str,
         played_words: set[str]
 ) -> (str, str):
+    prev_hira = prev_hira or "あ"
+    prev_kata = prev_kata or "ア"
+
     await inter.channel.send(f"My turn!")
 
     words_hira = await translationtools.get_words_starting_with(prev_hira)
@@ -92,8 +95,9 @@ async def take_user_turn(
     if prev_kata:
         last_hira = prev_hira[-1] if prev_hira[-1] not in "ゃゅょ" else prev_hira[-2:]
         last = translationtools.normalise_katakana(prev_kata)[-1] if prev_kata[-1] not in "ャュョ" else prev_kata[-2:]
+        romanji = translationtools.hiragana_to_romanji(prev_hira) or translationtools.katakana_to_romanji(prev_kata)
         await inter.channel.send(
-            f"The word was: {prev_hira or prev_kata} ({translationtools.katakana_to_romanji(prev_kata)})\n"
+            f"The word was: {prev_hira or prev_kata} ({romanji})\n"
             f"The letter to start is:"
             f" {last_hira if prev_hira else last} ({translationtools.katakana_to_romanji(last)})")
 
@@ -122,12 +126,14 @@ async def take_user_turn(
     if not await check_valid_word(katakana, hiragana, prev_kata, prev_hira, played_words, invalid_word):
         return True, "", ""
 
-    words_hira = await translationtools.search_jisho(hiragana)
-    logger.info(f"Checking for {hiragana} in {words_hira.keys()}")
+    words_hira = {}
+    if hiragana:
+        words_hira = await translationtools.search_jisho(hiragana)
+        logger.info(f"Checking for {hiragana} in {words_hira.keys()}")
     words_kata = await translationtools.search_jisho(katakana)
     logger.info(f"Checking for {katakana} in {words_kata.keys()}")
 
-    if hiragana not in words_hira and katakana not in words_kata:
+    if (not hiragana or hiragana not in words_hira) and katakana not in words_kata:
         return not await invalid_word(f"is not a valid word."), "", ""
 
     matches = ((words_hira[hiragana] if hiragana in words_hira else []) +
