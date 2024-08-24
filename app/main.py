@@ -66,11 +66,15 @@ async def duel(
 async def survive(
         inter: nextcord.Interaction,
         players: str = SlashOption(description="The players in the game", required=False),
+        vs_ref: bool = SlashOption(description="Play against the bot. default: true", required=False),
         chat: str = SlashOption(description="Enable chatting during the game.", required=False)
 ):
     players = list(set(bot.parse_mentions(players) + [inter.user])) if players else [inter.user]
-    await inter.response.send_message("Let's start a survival game!")
-    await initiate_duel(inter, [players], "survival", chat)
+    if vs_ref:
+        await initiate_duel(inter, [players, [bot.user]], "normal", chat)
+    else:
+        await inter.response.send_message("Let's start a survival game!")
+        await initiate_duel(inter, [players], "survival", chat)
 
 
 @bot.slash_command(
@@ -103,6 +107,9 @@ async def battle(
 
     teams = [team for team in [team_1, team_2, team_3, team_4, team_5] if team]
     t = team_1 + team_2 + team_3 + team_4 + team_5
+    if inter.user not in t:
+        await inter.response.send_message("You cannot challenge a team for someone else!", ephemeral=True)
+        return
     t.pop(t.index(inter.user))
 
     if bot.user in t and len(t) == 2 and inter.user in t:
@@ -138,6 +145,7 @@ async def initiate_duel(
     prev_hira = ""
     played_words = set()
     lives = {team[0].id: 3 for team in teams}
+    words_played = {user.id: 0 for team in teams for user in team}
 
     async def wait_callback(check):
         return await bot.wait_for('message', timeout=15.0 if mode == "speed" else 60.0, check=check)
@@ -165,6 +173,10 @@ async def initiate_duel(
                                          f" lost all their lives. ")
                 current = await knockout_team(current)
                 if not current:
+                    await inter.channel.send(
+                        f"The final streak was {streak}!\nThe longest word was: {max(played_words, key=len)}" +
+                        "\n".join([f"{user.global_name} played {words_played[user.id]} words"
+                                   for team in teams for user in team]))
                     return
 
         async def lose_life(message: str) -> None:
@@ -197,7 +209,7 @@ async def initiate_duel(
             else:
                 await inter.channel.send(f"The streak is {streak}!")
 
-        (cont, played_kata, played_hira) = await botutils.take_user_turn(
+        (cont, played_kata, played_hira, player) = await botutils.take_user_turn(
             inter, current, mode, chat, prev_kata, prev_hira, played_words, wait_callback, lose_life
         )
 
@@ -213,6 +225,7 @@ async def initiate_duel(
         prev_kata = played_kata
         prev_hira = played_hira
         current = teams[(teams.index(current) + 1) % len(teams)]
+        words_played[player] += 1
 
 
 if __name__ == '__main__':

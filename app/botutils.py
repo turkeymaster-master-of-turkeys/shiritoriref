@@ -1,6 +1,6 @@
 import asyncio
 import logging
-
+import random
 import nextcord.ui
 from nextcord import Interaction, ButtonStyle
 from nextcord.ui import Button, View
@@ -68,7 +68,7 @@ async def take_bot_turn(
     logger.info(f"Kata candidates: {kata_candidates}")
 
     if kata_candidates:
-        kata = kata_candidates[0]
+        kata = kata_candidates[random.randint(0, len(kata_candidates) - 1)]
         await inter.channel.send(translationtools.meaning_to_string(words_kata[kata], "", kata))
         return "", kata
 
@@ -86,7 +86,7 @@ async def take_user_turn(
         played_words: set[str],
         wait_callback,
         lose_life,
-) -> (bool, str, str):
+) -> (bool, str, str, int):
     if mode == "survival":
         await inter.channel.send(f"You have 60 seconds for the next word!")
     else:
@@ -107,13 +107,14 @@ async def take_user_turn(
             return (msg.channel == inter.channel and msg.author in current and
                     (chat == "off" or msg.content[0:2] == "> "))
 
-        response: str = (await wait_callback(check)).content.strip("> ").lower()
+        response_msg = (await wait_callback(check))
+        response: str = response_msg.content.strip("> ").lower()
     except asyncio.TimeoutError:
         if mode == "survival":
             await inter.channel.send(f"You took too long to respond. Game over! The streak was {len(played_words)}.")
         else:
             await inter.channel.send(f"{team_to_string(current, mention=True)} took too long to respond. You lose!")
-        return False, "", ""
+        return False, "", "", -1
 
     hiragana = translationtools.romanji_to_hiragana(response)
     katakana = translationtools.romanji_to_katakana(response)
@@ -125,7 +126,7 @@ async def take_user_turn(
         return False
 
     if not await check_valid_word(katakana, hiragana, prev_kata, prev_hira, played_words, invalid_word):
-        return True, "", ""
+        return True, "", "", -1
 
     words_hira = {}
     if hiragana:
@@ -142,7 +143,7 @@ async def take_user_turn(
 
     await inter.channel.send(translationtools.meaning_to_string(matches, hiragana, katakana))
 
-    return True, katakana, hiragana
+    return True, katakana, hiragana, response_msg.author.id
 
 
 async def check_valid_word(
@@ -162,6 +163,6 @@ async def check_valid_word(
 
 
 def team_to_string(team: list[nextcord.User], mention=False) -> str:
-    return (", ".join([user.mention if mention else user.display_name for user in team[:len(team)-1]]) +
-            f" and {team[-1].mention if mention else team[-1].display_name}") if len(team) > 1 else (
-        team[0].mention if mention else team[0].display_name)
+    return (", ".join([user.mention if mention else user.global_name for user in team[:len(team)-1]]) +
+            f" and {team[-1].mention if mention else team[-1].global_name}") if len(team) > 1 else (
+        team[0].mention if mention else team[0].global_name)
