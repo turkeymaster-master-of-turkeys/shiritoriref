@@ -93,13 +93,14 @@ async def take_user_turn(
         await inter.channel.send(f"{team_to_string(current)}, your move!"
                                  f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
     if prev_kata:
-        last_hira = prev_hira[-1] if prev_hira[-1] not in "ゃゅょ" else prev_hira[-2:]
+        last_hira = (prev_hira[-1] if prev_hira[-1] not in "ゃゅょ" else prev_hira[-2:]) if prev_hira else ""
         last = translationtools.normalise_katakana(prev_kata)[-1] if prev_kata[-1] not in "ャュョ" else prev_kata[-2:]
-        romanji = translationtools.hiragana_to_romanji(prev_hira) or translationtools.katakana_to_romanji(prev_kata)
+        romanji = translationtools.hiragana_to_romanji(prev_hira) if prev_hira else (
+            translationtools.katakana_to_romanji(prev_kata))
         await inter.channel.send(
             f"The word was: {prev_hira or prev_kata} ({romanji})\n"
             f"The letter to start is:"
-            f" {last_hira if prev_hira else last} ({translationtools.katakana_to_romanji(last)})")
+            f" {last_hira or last} ({translationtools.katakana_to_romanji(last)})")
 
     try:
         def check(msg: nextcord.Message):
