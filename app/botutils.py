@@ -116,6 +116,10 @@ async def take_user_turn(
             await inter.channel.send(f"{team_to_string(current, mention=True)} took too long to respond. You lose!")
         return False, "", "", -1
 
+    if response == "> end":
+        await inter.channel.send(f"{team_to_string(current)} has ended the game.")
+        return False, "", "", -1
+
     hiragana = translationtools.romanji_to_hiragana(response)
     katakana = translationtools.romanji_to_katakana(response)
 
@@ -136,7 +140,7 @@ async def take_user_turn(
     logger.info(f"Checking for {katakana} in {words_kata.keys()}")
 
     if (not hiragana or hiragana not in words_hira) and katakana not in words_kata:
-        return not await invalid_word(f"is not a valid word."), "", ""
+        return not await invalid_word(f"is not a valid word."), "", "", -1
 
     matches = ((words_hira[hiragana] if hiragana in words_hira else []) +
                (words_kata[katakana] if katakana in words_kata else []))
@@ -163,6 +167,6 @@ async def check_valid_word(
 
 
 def team_to_string(team: list[nextcord.User], mention=False) -> str:
-    return (", ".join([user.mention if mention else user.global_name for user in team[:len(team)-1]]) +
-            f" and {team[-1].mention if mention else team[-1].global_name}") if len(team) > 1 else (
-        team[0].mention if mention else team[0].global_name)
+    names = [(user.mention if mention else
+              (user.global_name if user.global_name else user.display_name)) for user in team]
+    return (", ".join(names[:len(names) - 1]) + f" and {names[-1]}") if len(team) > 1 else names[0]
