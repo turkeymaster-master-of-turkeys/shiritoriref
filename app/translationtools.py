@@ -1,5 +1,4 @@
 import logging
-
 from jisho_api.word import Word
 
 logger = logging.getLogger("shiritori-ref")
@@ -37,22 +36,17 @@ def normalise_katakana(katakana: str) -> str:
     return ''.join(normal_map.get(c, c) for c in kata)
 
 
-async def get_dictionary(hira: str, kata: str) -> dict:
+async def search_jisho(term: str) -> dict:
     """
-    Uses the Jisho API to get a dictionary of words from the search term
-    :param hira: The hiragana term
-    :param kata: The katakana term
-    :return: Dictionary from readings to words
+    Searches the Jisho API for a term
+    :param term: Search term
+    :return: Dictionary of words
     """
-    wr1 = Word.request(hira) if hira else None
-    wr2 = Word.request(kata)
-    if not wr1 and not wr2:
+    wr = Word.request(term)
+    if not wr:
         return {}
-
-    dictionary = (wr1.dict()['data'] if wr1 else []) + (wr2.dict()['data'] if wr2 else [])
-
     words = {}
-    for x in dictionary:
+    for x in wr.dict()['data']:
         for y in x['japanese']:
             reading = y['reading']
             if not reading or len(reading) <= 1:
@@ -64,8 +58,25 @@ async def get_dictionary(hira: str, kata: str) -> dict:
                 words[reading].append(word_info)
             else:
                 words[reading] = [word_info]
-
     return words
+
+
+async def get_words_starting_with(word: str) -> dict:
+    start = word[:-2] if word[-1] in "ゃゅょ" else word[-1]
+    words = await search_jisho(f"{start}*")
+    return {k: v for k, v in words.items() if k.startswith(start)}
+
+
+def meaning_to_string(meanings: list[dict], hiragana: str, katakana: str, num: int = 3) -> str:
+    out = []
+    for i in range(num):
+        if i >= len(meanings):
+            break
+        meaning = meanings[i]
+        kanji = meaning['word'] or katakana
+        reading = f" ({hiragana})" if hiragana else ""
+        out.append(f"{kanji}{reading}:\n> {', '.join(meaning['meanings'])}")
+    return "\n".join(out)
 
 
 def romanji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str or None:
@@ -101,7 +112,7 @@ def romanji_to_hiragana(word) -> str or None:
     return romanji_to_kana(word, romaji_to_hiragana_dict, 'っ')
 
 
-def romaji_to_katakana(word: str) -> str or None:
+def romanji_to_katakana(word: str) -> str or None:
     """
     Converts a string to katakana, returns None if it isn't valid romanji
     :param word: The word to convert
@@ -131,8 +142,33 @@ def romaji_to_katakana(word: str) -> str or None:
     return katakana
 
 
+def kana_to_romanji(kana: str, dictionary: dict) -> str:
+    romanji = ""
+    i = 0
+    while True:
+        if i >= len(kana):
+            break
+        if kana[i:i+2] in dictionary:
+            romanji += dictionary[kana[i:i+2]]
+            i += 2
+        elif kana[i] in dictionary:
+            romanji += dictionary[kana[i]]
+            i += 1
+        else:
+            return ""
+    return romanji
+
+
 def katakana_to_romanji(kata: str) -> str:
-    return ''.join([katakana_to_romanji_dict.get(k, k) for k in kata])
+    return kana_to_romanji(kata, katakana_to_romanji_dict)
+
+
+def hiragana_to_romanji(hira: str) -> str:
+    return kana_to_romanji(hira, hiragana_to_romanji_dict)
+
+
+def hiragana_to_katakana(hira: str) -> str:
+    return romanji_to_katakana(hiragana_to_romanji(hira))
 
 
 romaji_to_hiragana_dict: dict[str, str] = {
@@ -202,6 +238,7 @@ romaji_to_katakana_dict: dict[str, str] = {
 }
 
 katakana_to_romanji_dict = {v: k for k, v in romaji_to_katakana_dict.items()}
+hiragana_to_romanji_dict = {v: k for k, v in romaji_to_hiragana_dict.items()}
 
 set_a = {'ア', 'カ', 'サ', 'タ', 'ナ', 'ハ', 'マ', 'ヤ', 'ラ', 'ワ', 'ガ', 'ザ', 'ダ', 'バ', 'パ'}
 set_i = {'イ', 'キ', 'シ', 'チ', 'ニ', 'ヒ', 'ミ', 'リ', 'ギ', 'ジ', 'ヂ', 'ビ', 'ピ', 'ィ'}

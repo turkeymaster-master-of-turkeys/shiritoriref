@@ -127,8 +127,6 @@ async def initiate_duel(
     elif teams[1][0] != bot.user:
         await inter.channel.send(f"{botutils.team_to_string(teams[0])},"
                                  f" as the challenged, you have the right of the first word.")
-    else:
-        await inter.channel.send(f"Please note: this is an experimental feature and may not function correctly.")
 
     current = teams[0]
     prev_kata = ""
@@ -138,6 +136,14 @@ async def initiate_duel(
 
     async def wait_callback(check):
         return await bot.wait_for('message', timeout=15.0 if mode == "speed" else 60.0, check=check)
+
+    async def knockout_team(team: list[nextcord.User]) -> list[nextcord.User]:
+        index = teams.index(team)
+        teams.pop(index)
+        if len(teams) == 1:
+            await inter.channel.send(f"{botutils.team_to_string(teams[0], mention=True)} has won!")
+            return []
+        return teams[index % len(teams)]
 
     while True:
         streak = len(played_words)
@@ -152,22 +158,22 @@ async def initiate_duel(
             else:
                 await inter.channel.send(f"{botutils.team_to_string(current)} {"have" if len(current) > 1 else "has"}"
                                          f" lost all their lives. ")
-                index = teams.index(current)
-                teams.pop(index)
-                current = teams[index % len(teams)]
-                if len(teams) == 1:
-                    await inter.channel.send(f"{botutils.team_to_string(teams[0], mention=True)} has won!")
+                current = await knockout_team(current)
+                if not current:
                     return
 
         async def lose_life(message: str) -> None:
             lives[current_id] -= 1
             await inter.channel.send(f"{message} You have {lives[current_id]} lives remaining.")
 
-        if current == bot.user:
-            played_word = await botutils.take_bot_turn(inter, prev_kata)
-            if played_word:
-                played_words.add(played_word)
-                prev_kata = played_word
+        if bot.user in current:
+            logger.info("Bot's turn")
+            (played_hira, played_kata) = await botutils.take_bot_turn(inter, prev_hira, prev_kata, played_words)
+            logger.info(f"Bot played {played_kata}")
+            if played_kata:
+                played_words.add(played_kata)
+                prev_kata = played_kata
+                prev_hira = played_hira
                 current = teams[(teams.index(current) + 1) % len(teams)]
                 continue
             else:
@@ -191,11 +197,8 @@ async def initiate_duel(
         )
 
         if not cont:
-            index = teams.index(current)
-            teams.pop(index)
-            current = teams[index % len(teams)]
-            if len(teams) == 1:
-                await inter.channel.send(f"{botutils.team_to_string(teams[0], mention=True)} has won!")
+            current = await knockout_team(current)
+            if not current:
                 return
             continue
         if not played_kata:

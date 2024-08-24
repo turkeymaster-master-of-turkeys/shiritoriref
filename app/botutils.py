@@ -40,22 +40,38 @@ def get_view(team: list[nextcord.User], callback) -> nextcord.ui.view.View:
     return view
 
 
-async def take_bot_turn(inter: nextcord.Interaction, previous_word: str) -> str:
+async def take_bot_turn(
+        inter: nextcord.Interaction,
+        prev_hira: str, prev_kata: str,
+        played_words: set[str]
+) -> (str, str):
     await inter.channel.send(f"My turn!")
 
-    hira = translationtools.romanji_to_hiragana(previous_word)
-    kata = translationtools.romaji_to_katakana(previous_word)
-    words = await translationtools.get_dictionary(hira[-1], kata[-1])
-    if not words:
-        return ""
+    words_hira = await translationtools.get_words_starting_with(prev_hira)
+    hira_candidates = [k for k in words_hira.keys() if
+                       translationtools.hiragana_to_katakana(k) not in played_words and k[-1] != 'ん']
 
-    word = list(words.keys())[0]
-    for i in range(3):
-        if i >= len(words[word]):
-            break
-        match = words[word][i]
-        await inter.channel.send(f"{match['word']} ({word}):\n> {', '.join(match['meanings'])}")
-    return kata
+    logger.info(f"Hira candidates: {hira_candidates}")
+
+    if hira_candidates:
+        hira = hira_candidates[0]
+        kata = translationtools.hiragana_to_katakana(hira)
+        await inter.channel.send(translationtools.meaning_to_string(words_hira[hira], hira, kata))
+        return hira, kata
+
+    words_kata = await translationtools.get_words_starting_with(prev_kata)
+    kata_candidates = [k for k in words_kata.keys() if k not in played_words and k[-1] != 'ン']
+
+    logger.info(f"Kata candidates: {kata_candidates}")
+
+    if kata_candidates:
+        kata = kata_candidates[0]
+        await inter.channel.send(translationtools.meaning_to_string(words_kata[kata], "", kata))
+        return "", kata
+
+    await inter.channel.send("I have no words to play! You win!")
+
+    return "", ""
 
 
 async def take_user_turn(
@@ -73,10 +89,13 @@ async def take_user_turn(
     else:
         await inter.channel.send(f"{team_to_string(current)}, your move!"
                                  f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
-    await inter.channel.send(
-        f"The word was {prev_hira or prev_kata} ({translationtools.katakana_to_romanji(prev_kata)})\n"
-        f" The letter to start is:"
-        f" {prev_hira[-1] if prev_hira else prev_kata[-1]} ({translationtools.katakana_to_romanji(prev_kata[-1])})")
+    if prev_kata:
+        last_hira = prev_hira[-1] if prev_hira[-1] not in "ゃゅょ" else prev_hira[-2:]
+        last = translationtools.normalise_katakana(prev_kata)[-1] if prev_kata[-1] not in "ャュョ" else prev_kata[-2:]
+        await inter.channel.send(
+            f"The word was: {prev_hira or prev_kata} ({translationtools.katakana_to_romanji(prev_kata)})\n"
+            f"The letter to start is:"
+            f" {last_hira if prev_hira else last} ({translationtools.katakana_to_romanji(last)})")
 
     try:
         def check(msg: nextcord.Message):
@@ -92,7 +111,7 @@ async def take_user_turn(
         return False, "", ""
 
     hiragana = translationtools.romanji_to_hiragana(response)
-    katakana = translationtools.romaji_to_katakana(response)
+    katakana = translationtools.romanji_to_katakana(response)
 
     logger.info(f"{team_to_string(current)} played {response}")
 
@@ -103,22 +122,19 @@ async def take_user_turn(
     if not await check_valid_word(katakana, hiragana, prev_kata, prev_hira, played_words, invalid_word):
         return True, "", ""
 
-    words = await translationtools.get_dictionary(hiragana, katakana)
-    logger.info(f"checking for {hiragana} or {katakana} in {words.keys()}")
+    words_hira = await translationtools.search_jisho(hiragana)
+    logger.info(f"Checking for {hiragana} in {words_hira.keys()}")
+    words_kata = await translationtools.search_jisho(katakana)
+    logger.info(f"Checking for {katakana} in {words_kata.keys()}")
 
-    if hiragana not in words and katakana not in words:
+    if hiragana not in words_hira and katakana not in words_kata:
         return not await invalid_word(f"is not a valid word."), "", ""
 
-    matches = ((words[hiragana] if hiragana in words else []) +
-               (words[katakana] if katakana in words else []))
+    matches = ((words_hira[hiragana] if hiragana in words_hira else []) +
+               (words_kata[katakana] if katakana in words_kata else []))
 
-    for i in range(3):
-        if i >= len(matches):
-            break
-        match = matches[i]
-        kanji = match['word'] or katakana
-        reading = f" ({hiragana})" if hiragana else ""
-        await inter.channel.send(f"{kanji}{reading}:\n> {', '.join(match['meanings'])}")
+    await inter.channel.send(translationtools.meaning_to_string(matches, hiragana, katakana))
+
     return True, katakana, hiragana
 
 
