@@ -75,7 +75,7 @@ async def survive(
         await initiate_duel(inter, [players, [bot.user]], "normal", chat)
     else:
         await inter.response.send_message("Let's start a survival game!")
-        await initiate_duel(inter, [players], "survival", chat)
+        await initiate_duel(inter, [players], "normal", chat)
 
 
 @bot.slash_command(
@@ -132,9 +132,7 @@ async def initiate_duel(
         logger.info(f"{botutils.team_to_string(teams[0])} challenged {botutils.team_to_string(teams[1])}"
                     f" to a duel in {mode} mode with chat {chat}.")
 
-    if mode == "survival":
-        await inter.channel.send(f"Survival game started! {botutils.team_to_string(teams[0])}, you have 3 lives.")
-    elif teams[1][0] != bot.user:
+    if bot.user not in teams[0]:
         await inter.channel.send(f"{botutils.team_to_string(teams[0])},"
                                  f" as the challenged, you have the right of the first word.")
 
@@ -146,7 +144,6 @@ async def initiate_duel(
     }
     lives = {team[0].id: 3 for team in teams}
     num_words_played = {user: 0 for team in teams for user in team if user != bot.user}
-    bot_played_num = 0
 
     async def wait_callback(check):
         return await bot.wait_for('message', timeout=15.0 if mode == "speed" else 60.0, check=check)
@@ -169,16 +166,11 @@ async def initiate_duel(
             await inter.channel.send(f"{message} You have {lives[current_id]} lives remaining.")
 
         if lives[current_id] == 0:
-            if mode == "survival":
-                await inter.channel.send(f"You have lost all your lives! {botutils.team_to_string(current)},"
-                                         f" you survived for {streak} words.")
+            await inter.channel.send(f"{botutils.team_to_string(current)} {"have" if len(current) > 1 else "has"}"
+                                     f" lost all their lives. ")
+            current = await knockout_team(current)
+            if not current:
                 break
-            else:
-                await inter.channel.send(f"{botutils.team_to_string(current)} {"have" if len(current) > 1 else "has"}"
-                                         f" lost all their lives. ")
-                current = await knockout_team(current)
-                if not current:
-                    break
 
         if bot.user in current:
             logger.info("Bot's turn")

@@ -89,11 +89,8 @@ async def take_user_turn(
     prev_hira = words_state['prev_hira']
     played_words = words_state['played_words']
 
-    if mode == "survival":
-        await inter.channel.send(f"You have 60 seconds for the next word!")
-    else:
-        await inter.channel.send(f"{team_to_string(current)}, your move!"
-                                 f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
+    await inter.channel.send(f"{team_to_string(current)}, your move!"
+                             f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
 
     if prev_kata:
         await announce_previous_word(inter, prev_kata, prev_hira)
@@ -105,10 +102,7 @@ async def take_user_turn(
 
         response_msg = (await wait_callback(check))
     except asyncio.TimeoutError:
-        if mode == "survival":
-            await inter.channel.send(f"You took too long to respond. Game over! The streak was {len(played_words)}.")
-        else:
-            await inter.channel.send(f"{team_to_string(current, mention=True)} took too long to respond. You lose!")
+        await inter.channel.send(f"{team_to_string(current, mention=True)} took too long to respond. You lose!")
         return False, "", "", None
 
     return await process_player_response(inter, response_msg, current, words_state, lose_life)
