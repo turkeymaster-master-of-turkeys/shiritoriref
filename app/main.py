@@ -139,11 +139,14 @@ async def initiate_duel(
                                  f" as the challenged, you have the right of the first word.")
 
     current = teams[0]
-    prev_kata = ""
-    prev_hira = ""
-    played_words = set()
+    words_state = {
+        "prev_kata": "",
+        "prev_hira": "",
+        "played_words": set()
+    }
     lives = {team[0].id: 3 for team in teams}
     num_words_played = {user.id: 0 for team in teams for user in team}
+    print(num_words_played)
 
     async def wait_callback(check):
         return await bot.wait_for('message', timeout=15.0 if mode == "speed" else 60.0, check=check)
@@ -157,7 +160,7 @@ async def initiate_duel(
         return teams[index % len(teams)]
 
     while True:
-        streak = len(played_words)
+        streak = len(words_state['played_words'])
         logger.info(f"Streak {streak}, Lives: {lives}")
         current_id = current[0].id
 
@@ -182,12 +185,14 @@ async def initiate_duel(
 
         if bot.user in current:
             logger.info("Bot's turn")
-            (played_hira, played_kata) = await botutils.take_bot_turn(inter, prev_hira, prev_kata, played_words)
+            (played_hira, played_kata) = await botutils.take_bot_turn(inter, words_state)
             logger.info(f"Bot played {played_kata}")
             if played_kata:
-                played_words.add(played_kata)
-                prev_kata = played_kata
-                prev_hira = played_hira
+                words_state = {
+                    "prev_kata": played_kata,
+                    "prev_hira": played_hira,
+                    "played_words": words_state['played_words'].union({played_kata})
+                }
                 current = teams[(teams.index(current) + 1) % len(teams)]
                 continue
             else:
@@ -196,7 +201,7 @@ async def initiate_duel(
         await botutils.announce_streak(inter, streak)
 
         (cont, played_kata, played_hira, player) = await botutils.take_user_turn(
-            inter, current, mode, chat, prev_kata, prev_hira, played_words, wait_callback, lose_life
+            inter, current, mode, chat, words_state, wait_callback, lose_life
         )
 
         if not cont:
@@ -207,9 +212,11 @@ async def initiate_duel(
         if not played_kata:
             continue
 
-        played_words.add(played_kata)
-        prev_kata = played_kata
-        prev_hira = played_hira
+        words_state = {
+            "prev_kata": played_kata,
+            "prev_hira": played_hira,
+            "played_words": words_state['played_words'].union({played_kata})
+        }
         current = teams[(teams.index(current) + 1) % len(teams)]
         num_words_played[player] += 1
 

@@ -42,11 +42,11 @@ def get_view(team: list[nextcord.User], callback) -> nextcord.ui.view.View:
 
 async def take_bot_turn(
         inter: nextcord.Interaction,
-        prev_hira: str, prev_kata: str,
-        played_words: set[str]
+        words_state: dict[str, str],
 ) -> (str, str):
-    prev_hira = prev_hira or "あ"
-    prev_kata = prev_kata or "ア"
+    prev_hira = words_state['prev_hira'] or "あ"
+    prev_kata = words_state['prev_kata'] or "ア"
+    played_words = words_state['played_words']
 
     await inter.channel.send(f"My turn!")
 
@@ -81,12 +81,14 @@ async def take_user_turn(
         inter: nextcord.Interaction,
         current: list[nextcord.User],
         mode: str, chat: str,
-        prev_kata: str,
-        prev_hira: str,
-        played_words: set[str],
+        words_state: dict[str, str],
         wait_callback,
         lose_life,
 ) -> (bool, str, str, int):
+    prev_kata = words_state['prev_kata']
+    prev_hira = words_state['prev_hira']
+    played_words = words_state['played_words']
+
     if mode == "survival":
         await inter.channel.send(f"You have 60 seconds for the next word!")
     else:
@@ -109,13 +111,14 @@ async def take_user_turn(
             await inter.channel.send(f"{team_to_string(current, mention=True)} took too long to respond. You lose!")
         return False, "", "", -1
 
-    return await process_player_response(inter, response_msg, current, lose_life)
+    return await process_player_response(inter, response_msg, current, words_state, lose_life)
 
 
 async def process_player_response(
         inter: nextcord.Interaction,
         response_msg: nextcord.Message,
         current: list[nextcord.User],
+        words_state: dict[str, str],
         lose_life,
 ) -> (bool, str, str, int):
     response: str = response_msg.content.strip("> ").lower()
@@ -132,7 +135,7 @@ async def process_player_response(
         await lose_life(f"{(hiragana if hiragana else katakana) or response} {reason}")
         return False
 
-    if not await check_valid_word(katakana, hiragana, prev_kata, prev_hira, played_words, invalid_word):
+    if not await check_valid_word(katakana, hiragana, words_state, invalid_word):
         return True, "", "", -1
 
     words_hira = {}
@@ -163,14 +166,17 @@ async def announce_previous_word(inter: nextcord.Interaction, prev_kata: str, pr
         f"The letter to start is:"
         f" {last_hira or last} ({translationtools.katakana_to_romanji(last)})")
 
+
 async def check_valid_word(
-        kata: str, hira: str, prev_kata: str, prev_hira: str, played_words: set[str], invalid_word
+        kata: str, hira: str, words_state: dict[str, str], invalid_word
 ) -> bool:
+    prev_kata = words_state['prev_kata']
+    prev_hira = words_state['prev_hira']
     if not prev_kata and not prev_hira:
         return True
     if not kata:
         return await invalid_word("is not a valid Romaji word!")
-    if kata in played_words:
+    if kata in words_state['played_words']:
         return await invalid_word("has already been played!")
     if not translationtools.match_kana(prev_kata, kata) and not translationtools.match_kana(prev_hira, hira):
         return await invalid_word("does not match the previous word!")
