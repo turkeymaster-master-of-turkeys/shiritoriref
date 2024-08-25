@@ -191,7 +191,6 @@ async def initiate_duel(
                     "played_words": words_state['played_words'].union({played_kata})
                 }
                 current = teams[(teams.index(current) + 1) % len(teams)]
-                bot_played_num += 1
                 continue
             else:
                 break
@@ -221,8 +220,7 @@ async def initiate_duel(
     await inter.channel.send(
         f"The final streak was {streak}!\n" +
         "\n".join([f"{user.global_name or user.display_name} played {num} words"
-                   for user, num in num_words_played.items()] +
-                  [f"{bot.user.display_name} played {bot_played_num} words"]))
+                   for user, num in num_words_played.items()]))
 
 
 if __name__ == '__main__':

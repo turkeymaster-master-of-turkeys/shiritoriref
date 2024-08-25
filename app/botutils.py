@@ -57,7 +57,7 @@ async def take_bot_turn(
     logger.info(f"Hira candidates: {hira_candidates}")
 
     if hira_candidates:
-        hira = hira_candidates[0]
+        hira = hira_candidates[random.randint(0, len(hira_candidates) - 1)]
         kata = translationtools.hiragana_to_katakana(hira)
         await inter.channel.send(translationtools.meaning_to_string(words_hira[hira], hira, kata))
         return hira, kata
