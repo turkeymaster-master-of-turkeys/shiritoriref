@@ -143,7 +143,7 @@ async def initiate_duel(
         "played_words": set()
     }
     lives = {team[0].id: 3 for team in teams}
-    num_words_played = {user: 0 for team in teams for user in team if user != bot.user}
+    num_words_played = {user: 0 for team in teams for user in team}
 
     async def wait_callback(check):
         return await bot.wait_for('message', timeout=15.0 if mode == "speed" else 60.0, check=check)
@@ -173,7 +173,6 @@ async def initiate_duel(
                 break
 
         if bot.user in current:
-            logger.info("Bot's turn")
             (played_hira, played_kata) = await botutils.take_bot_turn(inter, words_state)
             logger.info(f"Bot played {played_kata}")
             if played_kata:
@@ -183,6 +182,7 @@ async def initiate_duel(
                     "played_words": words_state['played_words'].union({played_kata})
                 }
                 current = teams[(teams.index(current) + 1) % len(teams)]
+                num_words_played[bot.user] += 1
                 continue
             else:
                 break

@@ -42,7 +42,7 @@ def get_view(team: list[nextcord.User], callback) -> nextcord.ui.view.View:
 
 async def take_bot_turn(
         inter: nextcord.Interaction,
-        words_state: dict[str, str],
+        words_state: dict,
 ) -> (str, str):
     prev_hira = words_state['prev_hira'] or "あ"
     prev_kata = words_state['prev_kata'] or "ア"
@@ -87,7 +87,6 @@ async def take_user_turn(
 ) -> (bool, str, str, nextcord.User):
     prev_kata = words_state['prev_kata']
     prev_hira = words_state['prev_hira']
-    played_words = words_state['played_words']
 
     await inter.channel.send(f"{team_to_string(current)}, your move!"
                              f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
