@@ -92,15 +92,9 @@ async def take_user_turn(
     else:
         await inter.channel.send(f"{team_to_string(current)}, your move!"
                                  f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
+
     if prev_kata:
-        last_hira = (prev_hira[-1] if prev_hira[-1] not in "ゃゅょ" else prev_hira[-2:]) if prev_hira else ""
-        last = translationtools.normalise_katakana(prev_kata)[-1] if prev_kata[-1] not in "ャュョ" else prev_kata[-2:]
-        romanji = translationtools.hiragana_to_romanji(prev_hira) if prev_hira else (
-            translationtools.katakana_to_romanji(prev_kata))
-        await inter.channel.send(
-            f"The word was: {prev_hira or prev_kata} ({romanji})\n"
-            f"The letter to start is:"
-            f" {last_hira or last} ({translationtools.katakana_to_romanji(last)})")
+        await announce_previous_word(inter, prev_kata, prev_hira)
 
     try:
         def check(msg: nextcord.Message):
@@ -108,7 +102,6 @@ async def take_user_turn(
                     (chat == "off" or msg.content[0:2] == "> "))
 
         response_msg = (await wait_callback(check))
-        response: str = response_msg.content.strip("> ").lower()
     except asyncio.TimeoutError:
         if mode == "survival":
             await inter.channel.send(f"You took too long to respond. Game over! The streak was {len(played_words)}.")
@@ -116,6 +109,16 @@ async def take_user_turn(
             await inter.channel.send(f"{team_to_string(current, mention=True)} took too long to respond. You lose!")
         return False, "", "", -1
 
+    return await process_player_response(inter, response_msg, current, lose_life)
+
+
+async def process_player_response(
+        inter: nextcord.Interaction,
+        response_msg: nextcord.Message,
+        current: list[nextcord.User],
+        lose_life,
+) -> (bool, str, str, int):
+    response: str = response_msg.content.strip("> ").lower()
     if response == "> end":
         await inter.channel.send(f"{team_to_string(current)} has ended the game.")
         return False, "", "", -1
@@ -150,6 +153,16 @@ async def take_user_turn(
     return True, katakana, hiragana, response_msg.author.id
 
 
+async def announce_previous_word(inter: nextcord.Interaction, prev_kata: str, prev_hira: str) -> None:
+    last_hira = (prev_hira[-1] if prev_hira[-1] not in "ゃゅょ" else prev_hira[-2:]) if prev_hira else ""
+    last = translationtools.normalise_katakana(prev_kata)[-1] if prev_kata[-1] not in "ャュョ" else prev_kata[-2:]
+    romanji = translationtools.hiragana_to_romanji(prev_hira) if prev_hira else (
+        translationtools.katakana_to_romanji(prev_kata))
+    await inter.channel.send(
+        f"The word was: {prev_hira or prev_kata} ({romanji})\n"
+        f"The letter to start is:"
+        f" {last_hira or last} ({translationtools.katakana_to_romanji(last)})")
+
 async def check_valid_word(
         kata: str, hira: str, prev_kata: str, prev_hira: str, played_words: set[str], invalid_word
 ) -> bool:
@@ -164,6 +177,21 @@ async def check_valid_word(
     if kata[-1] == 'ン':
         return await invalid_word("ends with ん!")
     return True
+
+
+async def announce_streak(inter: nextcord.Interaction, streak: int) -> None:
+    if streak != 0 and streak % 5 == 0:
+        if streak % 100 == 0:
+            await inter.channel.send(f"The streak is {streak}!")
+            await inter.channel.send(f"https://tenor.com/view/orangutan-driving-gif-24461244")
+        if streak % 50 == 0:
+            await inter.channel.send(f"The streak is {streak}! :orangutan::orangutan::orangutan:")
+        if streak % 25 == 0:
+            await inter.channel.send(f"The streak is {streak}! :fire::fire::fire:")
+        elif streak % 10 == 0:
+            await inter.channel.send(f"The streak is {streak}! :fire:")
+        else:
+            await inter.channel.send(f"The streak is {streak}!")
 
 
 def team_to_string(team: list[nextcord.User], mention=False) -> str:

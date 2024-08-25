@@ -143,7 +143,7 @@ async def initiate_duel(
     prev_hira = ""
     played_words = set()
     lives = {team[0].id: 3 for team in teams}
-    words_played = {user.id: 0 for team in teams for user in team}
+    num_words_played = {user.id: 0 for team in teams for user in team}
 
     async def wait_callback(check):
         return await bot.wait_for('message', timeout=15.0 if mode == "speed" else 60.0, check=check)
@@ -161,6 +161,10 @@ async def initiate_duel(
         logger.info(f"Streak {streak}, Lives: {lives}")
         current_id = current[0].id
 
+        async def lose_life(message: str) -> None:
+            lives[current_id] -= 1
+            await inter.channel.send(f"{message} You have {lives[current_id]} lives remaining.")
+
         if lives[current_id] == 0:
             if mode == "survival":
                 await inter.channel.send(f"You have lost all your lives! {botutils.team_to_string(current)},"
@@ -172,14 +176,9 @@ async def initiate_duel(
                 current = await knockout_team(current)
                 if not current:
                     await inter.channel.send(
-                        f"The final streak was {streak}!\nThe longest word was: {max(played_words, key=len)}" +
-                        "\n".join([f"{user.global_name} played {words_played[user.id]} words"
+                        "\n".join([f"{user.global_name} played {num_words_played[user.id]} words"
                                    for team in teams for user in team]))
                     return
-
-        async def lose_life(message: str) -> None:
-            lives[current_id] -= 1
-            await inter.channel.send(f"{message} You have {lives[current_id]} lives remaining.")
 
         if bot.user in current:
             logger.info("Bot's turn")
@@ -194,18 +193,7 @@ async def initiate_duel(
             else:
                 return
 
-        if streak != 0 and streak % 5 == 0:
-            if streak % 100 == 0:
-                await inter.channel.send(f"The streak is {streak}!")
-                await inter.channel.send(f"https://tenor.com/view/orangutan-driving-gif-24461244")
-            if streak % 50 == 0:
-                await inter.channel.send(f"The streak is {streak}! :orangutan::orangutan::orangutan:")
-            if streak % 25 == 0:
-                await inter.channel.send(f"The streak is {streak}! :fire::fire::fire:")
-            elif streak % 10 == 0:
-                await inter.channel.send(f"The streak is {streak}! :fire:")
-            else:
-                await inter.channel.send(f"The streak is {streak}!")
+        await botutils.announce_streak(inter, streak)
 
         (cont, played_kata, played_hira, player) = await botutils.take_user_turn(
             inter, current, mode, chat, prev_kata, prev_hira, played_words, wait_callback, lose_life
@@ -223,7 +211,7 @@ async def initiate_duel(
         prev_kata = played_kata
         prev_hira = played_hira
         current = teams[(teams.index(current) + 1) % len(teams)]
-        words_played[player] += 1
+        num_words_played[player] += 1
 
 
 if __name__ == '__main__':
