@@ -121,7 +121,7 @@ async def process_player_response(
         words_state: dict[str, str],
         lose_life,
 ) -> (bool, str, str, int):
-    response: str = response_msg.content.strip("> ").lower()
+    response: str = response_msg.content[2 if response_msg.content.startswith("> ") else 0:].lower()
     if response == "> end":
         await inter.channel.send(f"{team_to_string(current)} has ended the game.")
         return False, "", "", -1

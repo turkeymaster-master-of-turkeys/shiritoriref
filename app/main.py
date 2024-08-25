@@ -113,7 +113,7 @@ async def battle(
         return
     t.pop(t.index(inter.user))
 
-    if bot.user in t and len(t) == 2 and inter.user in t:
+    if bot.user in t and len(t) == 1:
         await inter.response.send_message("Lets practice Shiritori!")
         await initiate_duel(inter, teams, mode, chat)
         return
@@ -146,7 +146,6 @@ async def initiate_duel(
     }
     lives = {team[0].id: 3 for team in teams}
     num_words_played = {user.id: 0 for team in teams for user in team}
-    print(num_words_played)
 
     async def wait_callback(check):
         return await bot.wait_for('message', timeout=15.0 if mode == "speed" else 60.0, check=check)
@@ -161,7 +160,7 @@ async def initiate_duel(
 
     while True:
         streak = len(words_state['played_words'])
-        logger.info(f"Streak {streak}, Lives: {lives}")
+        logger.info(f"Streak {streak}, Lives: {lives}, Words played: {num_words_played}")
         current_id = current[0].id
 
         async def lose_life(message: str) -> None:
@@ -172,16 +171,13 @@ async def initiate_duel(
             if mode == "survival":
                 await inter.channel.send(f"You have lost all your lives! {botutils.team_to_string(current)},"
                                          f" you survived for {streak} words.")
-                return
+                break
             else:
                 await inter.channel.send(f"{botutils.team_to_string(current)} {"have" if len(current) > 1 else "has"}"
                                          f" lost all their lives. ")
                 current = await knockout_team(current)
                 if not current:
-                    await inter.channel.send(
-                        "\n".join([f"{user.global_name} played {num_words_played[user.id]} words"
-                                   for team in teams for user in team]))
-                    return
+                    break
 
         if bot.user in current:
             logger.info("Bot's turn")
@@ -196,7 +192,7 @@ async def initiate_duel(
                 current = teams[(teams.index(current) + 1) % len(teams)]
                 continue
             else:
-                return
+                break
 
         await botutils.announce_streak(inter, streak)
 
@@ -207,7 +203,7 @@ async def initiate_duel(
         if not cont:
             current = await knockout_team(current)
             if not current:
-                return
+                break
             continue
         if not played_kata:
             continue
@@ -219,6 +215,10 @@ async def initiate_duel(
         }
         current = teams[(teams.index(current) + 1) % len(teams)]
         num_words_played[player] += 1
+
+    await inter.channel.send(
+        "\n".join([f"{user.global_name} played {num_words_played[user.id]} words"
+                   for team in teams for user in team]))
 
 
 if __name__ == '__main__':
