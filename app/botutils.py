@@ -84,7 +84,7 @@ async def take_user_turn(
         words_state: dict[str, str],
         wait_callback,
         lose_life,
-) -> (bool, str, str, int):
+) -> (bool, str, str, nextcord.User):
     prev_kata = words_state['prev_kata']
     prev_hira = words_state['prev_hira']
     played_words = words_state['played_words']
@@ -109,7 +109,7 @@ async def take_user_turn(
             await inter.channel.send(f"You took too long to respond. Game over! The streak was {len(played_words)}.")
         else:
             await inter.channel.send(f"{team_to_string(current, mention=True)} took too long to respond. You lose!")
-        return False, "", "", -1
+        return False, "", "", None
 
     return await process_player_response(inter, response_msg, current, words_state, lose_life)
 
@@ -124,7 +124,7 @@ async def process_player_response(
     response: str = response_msg.content[2 if response_msg.content.startswith("> ") else 0:].lower()
     if response == "> end":
         await inter.channel.send(f"{team_to_string(current)} has ended the game.")
-        return False, "", "", -1
+        return False, "", "", None
 
     hiragana = translationtools.romanji_to_hiragana(response)
     katakana = translationtools.romanji_to_katakana(response)
@@ -136,7 +136,7 @@ async def process_player_response(
         return False
 
     if not await check_valid_word(katakana, hiragana, words_state, invalid_word):
-        return True, "", "", -1
+        return True, "", "", None
 
     words_hira = {}
     if hiragana:
@@ -153,7 +153,7 @@ async def process_player_response(
 
     await inter.channel.send(translationtools.meaning_to_string(matches, hiragana, katakana))
 
-    return True, katakana, hiragana, response_msg.author.id
+    return True, katakana, hiragana, response_msg.author
 
 
 async def announce_previous_word(inter: nextcord.Interaction, prev_kata: str, prev_hira: str) -> None:

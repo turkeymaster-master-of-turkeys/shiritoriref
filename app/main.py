@@ -145,7 +145,8 @@ async def initiate_duel(
         "played_words": set()
     }
     lives = {team[0].id: 3 for team in teams}
-    num_words_played = {user.id: 0 for team in teams for user in team}
+    num_words_played = {user: 0 for team in teams for user in team if user != bot.user}
+    bot_played_num = 0
 
     async def wait_callback(check):
         return await bot.wait_for('message', timeout=15.0 if mode == "speed" else 60.0, check=check)
@@ -190,6 +191,7 @@ async def initiate_duel(
                     "played_words": words_state['played_words'].union({played_kata})
                 }
                 current = teams[(teams.index(current) + 1) % len(teams)]
+                bot_played_num += 1
                 continue
             else:
                 break
@@ -217,8 +219,10 @@ async def initiate_duel(
         num_words_played[player] += 1
 
     await inter.channel.send(
-        "\n".join([f"{user.global_name} played {num_words_played[user.id]} words"
-                   for team in teams for user in team]))
+        f"The final streak was {streak}!\n" +
+        "\n".join([f"{user.global_name or user.display_name} played {num} words"
+                   for user, num in num_words_played.items()] +
+                  [f"{bot.user.display_name} played {bot_played_num} words"]))
 
 
 if __name__ == '__main__':
