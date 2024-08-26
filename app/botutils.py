@@ -152,11 +152,11 @@ async def announce_previous_word(inter: nextcord.Interaction, prev_kata: str, pr
     last_kata = translationtools.normalise_katakana(prev_kata)[-1] if prev_kata[-1] not in "ャュョ" else prev_kata[-2:]
     romaji = translationtools.hiragana_to_romaji(prev_hira) if prev_hira else (
         translationtools.katakana_to_romaji(prev_kata))
-
+    last_romaji = translationtools.hiragana_to_romaji(last_hira) or translationtools.katakana_to_romaji(last_kata)
     await inter.channel.send(
         f"The word was: {prev_hira or prev_kata} ({romaji})\n"
         f"The letter to start is:"
-        f" {last_hira or last_kata} ({romaji[-1]})")
+        f" {last_hira or last_kata} ({last_romaji})")
 
 
 async def check_valid_word(
