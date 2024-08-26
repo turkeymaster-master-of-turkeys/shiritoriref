@@ -136,9 +136,6 @@ async def process_player_response(
     words_kata = await translationtools.search_jisho(katakana)
     logger.info(f"Checking for {katakana} in {words_kata.keys()}")
 
-    matches = {key: value for key, value in words_romaji.items() if
-               translationtools.hiragana_to_romaji(key) == response}
-
     if (not hiragana or hiragana not in words_romaji) and katakana not in words_kata:
         return not await invalid_word(f"is not a valid word."), "", "", -1
 

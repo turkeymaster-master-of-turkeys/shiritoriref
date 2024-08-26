@@ -93,8 +93,9 @@ def romaji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str or No
         if word[i:i + j] in dictionary:
             kana_word += dictionary[word[i:i + j]]
             i += j
+            break
     while i < len(word):
-        if i + 1 < len(word) and word[i] == word[i + 1]:
+        if i + 1 < len(word) and word[i] == word[i + 1] and word[i] != 'n':
             kana_word += tsu  # Small tsu
             i += 1
         for j in range(min(3, len(word) - i), 0, -1):
@@ -193,7 +194,7 @@ romaji_to_hiragana_dict: dict[str, str] = {
     'ma': 'ま', 'mi': 'み', 'mu': 'む', 'me': 'め', 'mo': 'も',
     'ya': 'や', 'yu': 'ゆ', 'yo': 'よ',
     'ra': 'ら', 'ri': 'り', 'ru': 'る', 're': 'れ', 'ro': 'ろ',
-    'wa': 'わ', 'wo': 'を', 'n': 'ん',
+    'wa': 'わ', 'wo': 'を', 'nn': 'ん',
     'ga': 'が', 'gi': 'ぎ', 'gu': 'ぐ', 'ge': 'げ', 'go': 'ご',
     'za': 'ざ', 'ji': 'じ', 'zu': 'ず', 'ze': 'ぜ', 'zo': 'ぞ',
     'da': 'だ', 'di': 'ぢ', 'dzu': 'づ', 'de': 'で', 'do': 'ど',
@@ -223,7 +224,7 @@ romaji_to_katakana_dict: dict[str, str] = {
     'ma': 'マ', 'mi': 'ミ', 'mu': 'ム', 'me': 'メ', 'mo': 'モ',
     'ya': 'ヤ', 'yu': 'ユ', 'yo': 'ヨ',
     'ra': 'ラ', 'ri': 'リ', 'ru': 'ル', 're': 'レ', 'ro': 'ロ',
-    'wa': 'ワ', 'n': 'ン',
+    'wa': 'ワ', 'nn': 'ン',
     'ga': 'ガ', 'gi': 'ギ', 'gu': 'グ', 'ge': 'ゲ', 'go': 'ゴ',
     'za': 'ザ', 'ji': 'ジ', 'zu': 'ズ', 'ze': 'ゼ', 'zo': 'ゾ',
     'da': 'ダ', 'dzu': 'ヅ', 'de': 'デ', 'do': 'ド',
