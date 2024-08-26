@@ -119,8 +119,8 @@ async def process_player_response(
         await inter.channel.send(f"{team_to_string(current)} has ended the game.")
         return False, "", "", None
 
-    hiragana = translationtools.romanji_to_hiragana(response)
-    katakana = translationtools.romanji_to_katakana(response)
+    hiragana = translationtools.romaji_to_hiragana(response)
+    katakana = translationtools.romaji_to_katakana(response)
 
     logger.info(f"{team_to_string(current)} played {response}")
 
@@ -131,17 +131,18 @@ async def process_player_response(
     if not await check_valid_word(katakana, hiragana, words_state, invalid_word):
         return True, "", "", None
 
-    words_hira = {}
-    if hiragana:
-        words_hira = await translationtools.search_jisho(hiragana)
-        logger.info(f"Checking for {hiragana} in {words_hira.keys()}")
+    words_romaji = await translationtools.search_jisho(response)
+    logger.info(f"Checking for {hiragana} in {words_romaji.keys()}")
     words_kata = await translationtools.search_jisho(katakana)
     logger.info(f"Checking for {katakana} in {words_kata.keys()}")
 
-    if (not hiragana or hiragana not in words_hira) and katakana not in words_kata:
+    matches = {key: value for key, value in words_romaji.items() if
+               translationtools.hiragana_to_romaji(key) == response}
+
+    if (not hiragana or hiragana not in words_romaji) and katakana not in words_kata:
         return not await invalid_word(f"is not a valid word."), "", "", -1
 
-    matches = ((words_hira[hiragana] if hiragana in words_hira else []) +
+    matches = ((words_romaji[hiragana] if hiragana in words_romaji else []) +
                (words_kata[katakana] if katakana in words_kata else []))
 
     await inter.channel.send(translationtools.meaning_to_string(matches, hiragana, katakana))
@@ -151,13 +152,14 @@ async def process_player_response(
 
 async def announce_previous_word(inter: nextcord.Interaction, prev_kata: str, prev_hira: str) -> None:
     last_hira = (prev_hira[-1] if prev_hira[-1] not in "ゃゅょ" else prev_hira[-2:]) if prev_hira else ""
-    last = translationtools.normalise_katakana(prev_kata)[-1] if prev_kata[-1] not in "ャュョ" else prev_kata[-2:]
-    romanji = translationtools.hiragana_to_romanji(prev_hira) if prev_hira else (
-        translationtools.katakana_to_romanji(prev_kata))
+    last_kata = translationtools.normalise_katakana(prev_kata)[-1] if prev_kata[-1] not in "ャュョ" else prev_kata[-2:]
+    romaji = translationtools.hiragana_to_romaji(prev_hira) if prev_hira else (
+        translationtools.katakana_to_romaji(prev_kata))
+
     await inter.channel.send(
-        f"The word was: {prev_hira or prev_kata} ({romanji})\n"
+        f"The word was: {prev_hira or prev_kata} ({romaji})\n"
         f"The letter to start is:"
-        f" {last_hira or last} ({translationtools.katakana_to_romanji(last)})")
+        f" {last_hira or last_kata} ({romaji[-1]})")
 
 
 async def check_valid_word(

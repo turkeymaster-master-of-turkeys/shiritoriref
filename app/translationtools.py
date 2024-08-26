@@ -79,9 +79,9 @@ def meaning_to_string(meanings: list[dict], hiragana: str, katakana: str, num: i
     return "\n".join(out)
 
 
-def romanji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str or None:
+def romaji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str or None:
     """
-    Converts a string to kana, using a specified dictionary returns None if it isn't valid romanji
+    Converts a string to kana, using a specified dictionary returns None if it isn't valid romaji
     :param tsu: Small tsu to use
     :param dictionary: The dictionary to use
     :param word: The word to convert
@@ -108,17 +108,17 @@ def romanji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str or N
     return kana_word
 
 
-def romanji_to_hiragana(word) -> str or None:
-    return romanji_to_kana(word, romanji_to_hiragana_dict, 'っ')
+def romaji_to_hiragana(word) -> str or None:
+    return romaji_to_kana(word, romaji_to_hiragana_dict, 'っ')
 
 
-def romanji_to_katakana(word: str) -> str or None:
+def romaji_to_katakana(word: str) -> str or None:
     """
-    Converts a string to katakana, returns None if it isn't valid romanji
+    Converts a string to katakana, returns None if it isn't valid romaji
     :param word: The word to convert
     :return: The katakana word
     """
-    kata = romanji_to_kana(word, romanji_to_katakana_dict, 'ッ')
+    kata = romaji_to_kana(word, romaji_to_katakana_dict, 'ッ')
     if not kata:
         return None
 
@@ -142,48 +142,48 @@ def romanji_to_katakana(word: str) -> str or None:
     return katakana
 
 
-def kana_to_romanji(kana: str, dictionary: dict) -> str:
-    romanji = ""
+def kana_to_romaji(kana: str, dictionary: dict) -> str:
+    romaji = ""
     i = 0
     while True:
         if i >= len(kana):
             break
         if kana[i:i+2] in dictionary:
-            romanji += dictionary[kana[i:i+2]]
+            romaji += dictionary[kana[i:i+2]]
             i += 2
         elif kana[i] in dictionary:
-            romanji += dictionary[kana[i]]
+            romaji += dictionary[kana[i]]
             i += 1
         elif kana[i] in 'っッ':
             if i + 1 < len(kana) and kana[i + 1] in dictionary:
-                romanji += dictionary[kana[i + 1]][0]
+                romaji += dictionary[kana[i + 1]][0]
                 i += 1
             else:
                 return ""
         elif kana[i] == 'ー':
             if i > 0 and kana[i - 1] in dictionary:
-                romanji += dictionary[kana[i - 1]][-1]
+                romaji += dictionary[kana[i - 1]][-1]
             elif i > 0 and kana[i - 2:i] in dictionary:
-                romanji += dictionary[kana[i - 2:i]][-1]
+                romaji += dictionary[kana[i - 2:i]][-1]
             i += 1
         else:
             return ""
-    return romanji
+    return romaji
 
 
-def katakana_to_romanji(kata: str) -> str:
-    return kana_to_romanji(kata, katakana_to_romanji_dict)
+def katakana_to_romaji(kata: str) -> str:
+    return kana_to_romaji(kata, katakana_to_romaji_dict)
 
 
-def hiragana_to_romanji(hira: str) -> str:
-    return kana_to_romanji(hira, hiragana_to_romanji_dict)
+def hiragana_to_romaji(hira: str) -> str:
+    return kana_to_romaji(hira, hiragana_to_romaji_dict)
 
 
 def hiragana_to_katakana(hira: str) -> str:
-    return romanji_to_katakana(hiragana_to_romanji(hira))
+    return romaji_to_katakana(hiragana_to_romaji(hira))
 
 
-romanji_to_hiragana_dict: dict[str, str] = {
+romaji_to_hiragana_dict: dict[str, str] = {
     'a': 'あ', 'i': 'い', 'u': 'う', 'e': 'え', 'o': 'お',
     'ka': 'か', 'ki': 'き', 'ku': 'く', 'ke': 'け', 'ko': 'こ',
     'sa': 'さ', 'shi': 'し', 'su': 'す', 'se': 'せ', 'so': 'そ',
@@ -213,7 +213,7 @@ romanji_to_hiragana_dict: dict[str, str] = {
     'pya': 'ぴゃ', 'pyu': 'ぴゅ', 'pyo': 'ぴょ'
 }
 
-romanji_to_katakana_dict: dict[str, str] = {
+romaji_to_katakana_dict: dict[str, str] = {
     'a': 'ア', 'i': 'イ', 'u': 'ウ', 'e': 'エ', 'o': 'オ',
     'ka': 'カ', 'ki': 'キ', 'ku': 'ク', 'ke': 'ケ', 'ko': 'コ',
     'sa': 'サ', 'shi': 'シ', 'su': 'ス', 'se': 'セ', 'so': 'ソ',
@@ -249,8 +249,8 @@ romanji_to_katakana_dict: dict[str, str] = {
     'tsa': 'ツァ', 'tsi': 'ツィ', 'tse': 'ツェ', 'tso': 'ツォ'
 }
 
-katakana_to_romanji_dict = {v: k for k, v in romanji_to_katakana_dict.items()}
-hiragana_to_romanji_dict = {v: k for k, v in romanji_to_hiragana_dict.items()}
+katakana_to_romaji_dict = {v: k for k, v in romaji_to_katakana_dict.items()}
+hiragana_to_romaji_dict = {v: k for k, v in romaji_to_hiragana_dict.items()}
 
 set_a = {'ア', 'カ', 'サ', 'タ', 'ナ', 'ハ', 'マ', 'ヤ', 'ラ', 'ワ', 'ガ', 'ザ', 'ダ', 'バ', 'パ'}
 set_i = {'イ', 'キ', 'シ', 'チ', 'ニ', 'ヒ', 'ミ', 'リ', 'ギ', 'ジ', 'ヂ', 'ビ', 'ピ', 'ィ'}
