@@ -113,7 +113,7 @@ async def battle(
         return
     t.pop(t.index(inter.user))
 
-    if bot.user in t and len(t) == 1:
+    if bot.user in t:
         await inter.response.send_message("Lets practice Shiritori!")
         await initiate_duel(inter, teams, mode, chat)
         return

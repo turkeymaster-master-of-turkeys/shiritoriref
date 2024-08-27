@@ -125,7 +125,7 @@ async def process_player_response(
     logger.info(f"{team_to_string(current)} played {response}")
 
     async def invalid_word(reason: str):
-        await lose_life(f"{(hira if hira else kata) or response} {reason}")
+        await lose_life(f"{", ".join(hira if hira else kata) or response} {reason}")
         return False
 
     valid = [(h, k) for h, k in zip(hira, kata) if await check_valid_word(k, h, words_state, invalid_word)]
