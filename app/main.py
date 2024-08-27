@@ -11,7 +11,7 @@ load_dotenv()
 
 intents = nextcord.Intents.all()
 bot = commands.Bot(intents=intents)
-guilds = [643165990695206920, 931645765980393624]
+guilds = [g.id for g in bot.guilds]
 
 logger = logging.getLogger("shiritori-ref")
 logging.basicConfig(

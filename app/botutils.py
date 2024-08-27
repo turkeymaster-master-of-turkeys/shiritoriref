@@ -119,24 +119,28 @@ async def process_player_response(
         await inter.channel.send(f"{team_to_string(current)} has ended the game.")
         return False, "", "", None
 
-    hiragana = translationtools.romaji_to_hiragana(response)
-    katakana = translationtools.romaji_to_katakana(response)
+    hira = translationtools.romaji_to_hiragana(response)
+    kata = translationtools.romaji_to_katakana(response)
 
     logger.info(f"{team_to_string(current)} played {response}")
 
     async def invalid_word(reason: str):
-        await lose_life(f"{(hiragana if hiragana else katakana) or response} {reason}")
+        await lose_life(f"{(hira if hira else kata) or response} {reason}")
         return False
 
-    if not await check_valid_word(katakana, hiragana, words_state, invalid_word):
+    valid = [(h, k) for h, k in zip(hira, kata) if await check_valid_word(k, h, words_state, invalid_word)]
+    if not valid:
         return True, "", "", None
 
-    words_romaji = await translationtools.search_jisho(response)
-    logger.info(f"Checking for {hiragana} in {words_romaji.keys()}")
-    words_kata = await translationtools.search_jisho(katakana)
-    logger.info(f"Checking for {katakana} in {words_kata.keys()}")
+    for (hiragana, katakana) in valid:
+        words_romaji = await translationtools.search_jisho(response)
+        logger.info(f"Checking for {hiragana} in {words_romaji.keys()}")
+        words_kata = await translationtools.search_jisho(katakana)
+        logger.info(f"Checking for {katakana} in {words_kata.keys()}")
 
-    if (not hiragana or hiragana not in words_romaji) and katakana not in words_kata:
+        if (hiragana and hiragana in words_romaji) or katakana in words_kata:
+            break
+    else:
         return not await invalid_word(f"is not a valid word."), "", "", -1
 
     matches = ((words_romaji[hiragana] if hiragana in words_romaji else []) +
@@ -166,13 +170,13 @@ async def check_valid_word(
     prev_hira = words_state['prev_hira']
     if not prev_kata and not prev_hira:
         return True
-    if not kata:
+    elif not kata:
         return await invalid_word("is not a valid Romaji word!")
-    if kata in words_state['played_words']:
+    elif kata in words_state['played_words']:
         return await invalid_word("has already been played!")
-    if not translationtools.match_kana(prev_kata, kata) and not translationtools.match_kana(prev_hira, hira):
+    elif not translationtools.match_kana(prev_kata, kata) and not translationtools.match_kana(prev_hira, hira):
         return await invalid_word("does not match the previous word!")
-    if kata[-1] == 'ン':
+    elif kata[-1] == 'ン':
         return await invalid_word("ends with ん!")
     return True
 

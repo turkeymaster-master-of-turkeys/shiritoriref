@@ -79,7 +79,7 @@ def meaning_to_string(meanings: list[dict], hiragana: str, katakana: str, num: i
     return "\n".join(out)
 
 
-def romaji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str or None:
+def romaji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str:
     """
     Converts a string to kana, using a specified dictionary returns None if it isn't valid romaji
     :param tsu: Small tsu to use
@@ -104,16 +104,22 @@ def romaji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str or No
                 i += j
                 break
         else:
-            return None
-
+            return ''
     return kana_word
 
 
-def romaji_to_hiragana(word) -> str or None:
-    return romaji_to_kana(word, romaji_to_hiragana_dict, 'っ')
+def romaji_to_hiragana(word) -> list[str]:
+    hira = romaji_to_kana(word, romaji_to_hiragana_dict, 'っ')
+    if not hira:
+        return []
+    words = ['']
+    for c in hira:
+        words_n = [w + n_dict[c] for w in words] if c in 'なにぬねの' else []
+        words = [w + c for w in words] + words_n
+    return words
 
 
-def romaji_to_katakana(word: str) -> str or None:
+def romaji_to_katakana(word: str) -> list[str]:
     """
     Converts a string to katakana, returns None if it isn't valid romaji
     :param word: The word to convert
@@ -121,7 +127,7 @@ def romaji_to_katakana(word: str) -> str or None:
     """
     kata = romaji_to_kana(word, romaji_to_katakana_dict, 'ッ')
     if not kata:
-        return None
+        return []
 
     def convert_choonpu(char, next_char):
         if char in set_a and next_char == 'ア' or \
@@ -140,7 +146,13 @@ def romaji_to_katakana(word: str) -> str or None:
             katakana = kata[i] + katakana
         else:
             katakana = convert_choonpu(kata[i - 1], kata[i]) + katakana
-    return katakana
+
+    words = ['']
+    for c in katakana:
+        words_n = [w + n_dict[c] for w in words] if c in 'ナニヌネノ' else []
+        words = [w + c for w in words] + words_n
+
+    return words
 
 
 def kana_to_romaji(kana: str, dictionary: dict) -> str:
@@ -194,7 +206,7 @@ romaji_to_hiragana_dict: dict[str, str] = {
     'ma': 'ま', 'mi': 'み', 'mu': 'む', 'me': 'め', 'mo': 'も',
     'ya': 'や', 'yu': 'ゆ', 'yo': 'よ',
     'ra': 'ら', 'ri': 'り', 'ru': 'る', 're': 'れ', 'ro': 'ろ',
-    'wa': 'わ', 'wo': 'を', 'nn': 'ん',
+    'wa': 'わ', 'wo': 'を', 'n': 'ん',
     'ga': 'が', 'gi': 'ぎ', 'gu': 'ぐ', 'ge': 'げ', 'go': 'ご',
     'za': 'ざ', 'ji': 'じ', 'zu': 'ず', 'ze': 'ぜ', 'zo': 'ぞ',
     'da': 'だ', 'di': 'ぢ', 'dzu': 'づ', 'de': 'で', 'do': 'ど',
@@ -224,7 +236,7 @@ romaji_to_katakana_dict: dict[str, str] = {
     'ma': 'マ', 'mi': 'ミ', 'mu': 'ム', 'me': 'メ', 'mo': 'モ',
     'ya': 'ヤ', 'yu': 'ユ', 'yo': 'ヨ',
     'ra': 'ラ', 'ri': 'リ', 'ru': 'ル', 're': 'レ', 'ro': 'ロ',
-    'wa': 'ワ', 'nn': 'ン',
+    'wa': 'ワ', 'n': 'ン',
     'ga': 'ガ', 'gi': 'ギ', 'gu': 'グ', 'ge': 'ゲ', 'go': 'ゴ',
     'za': 'ザ', 'ji': 'ジ', 'zu': 'ズ', 'ze': 'ゼ', 'zo': 'ゾ',
     'da': 'ダ', 'dzu': 'ヅ', 'de': 'デ', 'do': 'ド',
@@ -261,3 +273,8 @@ set_i = {'イ', 'キ', 'シ', 'チ', 'ニ', 'ヒ', 'ミ', 'リ', 'ギ', 'ジ', '
 set_u = {'ウ', 'ク', 'ス', 'ツ', 'ヌ', 'フ', 'ム', 'ユ', 'ル', 'グ', 'ズ', 'ヅ', 'ブ', 'プ'}
 set_e = {'エ', 'ケ', 'セ', 'テ', 'ネ', 'ヘ', 'メ', 'レ', 'ゲ', 'ゼ', 'デ', 'ベ', 'ペ', 'ェ'}
 set_o = {'オ', 'コ', 'ソ', 'ト', 'ノ', 'ホ', 'モ', 'ヨ', 'ロ', 'ゴ', 'ゾ', 'ド', 'ボ', 'ポ', 'ォ'}
+
+n_dict = {
+    'な': 'んあ', 'に': 'んい', 'ぬ': 'んう', 'ね': 'んえ', 'の': 'んお',
+    'ナ': 'ンア', 'ニ': 'ンイ', 'ヌ': 'ンウ', 'ネ': 'ンエ', 'ノ': 'ンオ'
+}
