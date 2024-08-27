@@ -153,7 +153,8 @@ async def process_player_response(
 
 async def announce_previous_word(inter: nextcord.Interaction, prev_kata: str, prev_hira: str) -> None:
     last_hira = (prev_hira[-1] if prev_hira[-1] not in "ゃゅょ" else prev_hira[-2:]) if prev_hira else ""
-    last_kata = translationtools.normalise_katakana(prev_kata)[-1] if prev_kata[-1] not in "ャュョ" else prev_kata[-2:]
+    last_kata = translationtools.normalise_katakana(prev_kata)[-1] \
+        if prev_kata[-1] not in "ャュョァィェォ" else prev_kata[-2:]
     romaji = translationtools.hiragana_to_romaji(prev_hira) if prev_hira else (
         translationtools.katakana_to_romaji(prev_kata))
     last_romaji = translationtools.hiragana_to_romaji(last_hira) or translationtools.katakana_to_romaji(last_kata)

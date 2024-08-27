@@ -62,7 +62,7 @@ async def search_jisho(term: str) -> dict:
 
 
 async def get_words_starting_with(word: str) -> dict:
-    start = word[:-2] if word[-1] in "ゃゅょ" else word[-1]
+    start = word[-2:] if word[-1] in "ゃゅょャュョァィェォ" else word[-1]
     words = await search_jisho(f"{start}*")
     return {k: v for k, v in words.items() if k.startswith(start)}
 
