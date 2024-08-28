@@ -109,14 +109,8 @@ def romaji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str:
 
 
 def romaji_to_hiragana(word) -> list[str]:
-    hira = romaji_to_kana(word, romaji_to_hiragana_dict, 'っ')
-    if not hira:
-        return []
-    words = ['']
-    for c in hira:
-        words_n = [w + n_dict[c] for w in words] if c in 'なにぬねの' else []
-        words = [w + c for w in words] + words_n
-    return words
+    kata = romaji_to_katakana(word)
+    return [katakana_to_hiragana(k) for k in kata]
 
 
 def romaji_to_katakana(word: str) -> list[str]:
@@ -196,6 +190,16 @@ def hiragana_to_katakana(hira: str) -> str:
     return ''.join(hiragana_to_katakana_dict.get(c, c) for c in hira)
 
 
+def katakana_to_hiragana(kata: str) -> str:
+    hira = ""
+    for c in kata:
+        if c in katakana_to_hiragana_dict:
+            hira += katakana_to_hiragana_dict[c]
+        else:
+            return ""
+    return hira
+
+
 romaji_to_hiragana_dict: dict[str, str] = {
     'a': 'あ', 'i': 'い', 'u': 'う', 'e': 'え', 'o': 'お',
     'ka': 'か', 'ki': 'き', 'ku': 'く', 'ke': 'け', 'ko': 'こ',
@@ -267,6 +271,7 @@ hiragana_to_romaji_dict = {v: k for k, v in romaji_to_hiragana_dict.items()}
 hiragana_to_katakana_dict = {**{vh: vk for kk, vk in romaji_to_katakana_dict.items() for
                                 kh, vh in romaji_to_hiragana_dict.items() if kk == kh},
                              **{'ゃ': 'ャ', 'ゅ': 'ュ', 'ょ': 'ョ'}}
+katakana_to_hiragana_dict = {v: k for k, v in hiragana_to_katakana_dict.items()}
 
 set_a = {'ア', 'カ', 'サ', 'タ', 'ナ', 'ハ', 'マ', 'ヤ', 'ラ', 'ワ', 'ガ', 'ザ', 'ダ', 'バ', 'パ'}
 set_i = {'イ', 'キ', 'シ', 'チ', 'ニ', 'ヒ', 'ミ', 'リ', 'ギ', 'ジ', 'ヂ', 'ビ', 'ピ', 'ィ'}

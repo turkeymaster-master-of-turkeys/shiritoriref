@@ -128,7 +128,7 @@ async def battle(
 async def initiate_duel(
         inter: nextcord.Interaction, teams: list[list[nextcord.User]], mode, chat
 ):
-    if mode in ["normal", "speed"]:
+    if mode in ["normal", "speed"] and len(teams) > 1:
         logger.info(f"{botutils.team_to_string(teams[0])} challenged {botutils.team_to_string(teams[1])}"
                     f" to a duel in {mode} mode with chat {chat}.")
 
