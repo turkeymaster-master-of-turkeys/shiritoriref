@@ -124,13 +124,25 @@ async def process_player_response(
 
     logger.info(f"{team_to_string(current)} played {response}")
 
-    async def invalid_word(reason: str):
-        await lose_life(f"{', '.join(hira if hira else kata) or response} {reason}")
-        return False
-
-    valid = [(h, k) for h, k in zip(hira, kata) if await check_valid_word(k, h, words_state, invalid_word)]
-    if not valid:
+    if not hira and not kata:
+        await inter.channel.send(f"{response} is not a valid romaji word.")
         return True, "", "", None
+
+    async def invalid_word(r: str):
+        await lose_life(f"{', '.join(hira if hira else kata) or response} {r}")
+        return True
+
+    reasons = ([(k, get_invalid_reasons(k, words_state, 'kata')) for k in kata] +
+               [(h, get_invalid_reasons(h, words_state, 'hira')) for h in hira])
+    valid = []
+    invalid = []
+    for kana, reason in reasons:
+        if reason:
+            invalid.append(kana)
+        else:
+            valid.append(kana)
+    if not valid:
+        return await invalid_word(invalid[0][1]), "", "", None
 
     for (hiragana, katakana) in valid:
         words_romaji = await translationtools.search_jisho(response)
@@ -141,7 +153,7 @@ async def process_player_response(
         if (hiragana and hiragana in words_romaji) or katakana in words_kata:
             break
     else:
-        return not await invalid_word(f"is not a valid word."), "", "", -1
+        return await invalid_word(f"is not a valid word."), "", "", None
 
     matches = ((words_romaji[hiragana] if hiragana in words_romaji else []) +
                (words_kata[katakana] if katakana in words_kata else []))
@@ -164,22 +176,19 @@ async def announce_previous_word(inter: nextcord.Interaction, prev_kata: str, pr
         f" {last_hira or last_kata} ({last_romaji})")
 
 
-async def check_valid_word(
-        kata: str, hira: str, words_state: dict[str, str], invalid_word
-) -> bool:
-    prev_kata = words_state['prev_kata']
-    prev_hira = words_state['prev_hira']
-    if not prev_kata and not prev_hira:
-        return True
-    elif not kata:
-        return await invalid_word("is not a valid Romaji word!")
-    elif kata in words_state['played_words']:
-        return await invalid_word("has already been played!")
-    elif not translationtools.match_kana(prev_kata, kata) and not translationtools.match_kana(prev_hira, hira):
-        return await invalid_word("does not match the previous word!")
-    elif kata[-1] == 'ン':
-        return await invalid_word("ends with ん!")
-    return True
+def get_invalid_reasons(
+        kana: str, words_state: dict[str, str], hira_or_kata: str
+) -> str:
+    prev = words_state[f'prev_{hira_or_kata}']
+    if not prev:
+        return ""
+    elif translationtools.hiragana_to_katakana(kana) in words_state['played_words']:
+        return "has already been played!"
+    elif not translationtools.match_kana(prev, kana):
+        return "does not match the previous word!"
+    elif kana[-1] in 'ンん':
+        return "ends with ん!"
+    return ""
 
 
 async def announce_streak(inter: nextcord.Interaction, streak: int) -> None:
