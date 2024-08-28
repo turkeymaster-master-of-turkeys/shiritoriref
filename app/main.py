@@ -165,7 +165,7 @@ async def initiate_duel(
             lives[current_id] -= 1
             await inter.channel.send(f"{message} You have {lives[current_id]} lives remaining.")
 
-        if lives[current_id] == 0:
+        if lives[current_id] <= 0:
             await inter.channel.send(f"{botutils.team_to_string(current)} {'have' if len(current) > 1 else 'has'}"
                                      f" lost all their lives. ")
             current = await knockout_team(current)
