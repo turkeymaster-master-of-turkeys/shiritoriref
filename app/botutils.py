@@ -119,8 +119,7 @@ async def process_player_response(
         await inter.channel.send(f"{team_to_string(current)} has ended the game.")
         return False, "", "", None
 
-    hira = translationtools.romaji_to_hiragana(response)
-    kata = translationtools.romaji_to_katakana(response)
+    hira, kata = translationtools.romaji_to_hira_kata(response)
 
     logger.info(f"{team_to_string(current)} played {response}")
 

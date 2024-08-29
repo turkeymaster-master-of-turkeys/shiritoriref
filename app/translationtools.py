@@ -108,18 +108,6 @@ def romaji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str:
     return kana_word
 
 
-def romaji_to_hiragana(word) -> list[str]:
-    """
-    Converts a string to a list of possible hiragana
-    :param word:
-    :return: All possible hiragana parsings of the word
-    """
-    if all(c in set_hira for c in word):
-        return [word]
-    kata = romaji_to_katakana(word)
-    return [katakana_to_hiragana(k) for k in kata]
-
-
 def romaji_to_katakana(word: str) -> list[str]:
     """
     Converts a string to a list of possible katakana
@@ -157,6 +145,23 @@ def romaji_to_katakana(word: str) -> list[str]:
         words = [w + c for w in words] + words_n
 
     return words
+
+
+def romaji_to_hira_kata(word: str) -> tuple[list[str], list[str]]:
+    """
+    Converts a string to a list of possible hiragana and katakana
+    :param word: The word to convert
+    :return: All possible hiragana and katakana parsings of the word
+    """
+    if all(c in set_hira for c in word):
+        return [word], [hiragana_to_katakana(word)]
+    if all(c in set_kata for c in word):
+        return [katakana_to_hiragana(word)], [word]
+
+    kata = romaji_to_katakana(word)
+    hira = [katakana_to_hiragana(k) for k in kata]
+
+    return hira, kata
 
 
 def kana_to_romaji(kana: str, dictionary: dict) -> str:
