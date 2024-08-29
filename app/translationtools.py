@@ -81,11 +81,11 @@ def meaning_to_string(meanings: list[dict], hiragana: str, katakana: str, num: i
 
 def romaji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str:
     """
-    Converts a string to kana, using a specified dictionary returns None if it isn't valid romaji
+    Converts a string to a list of possible kana, using a specified dictionary
     :param tsu: Small tsu to use
     :param dictionary: The dictionary to use
     :param word: The word to convert
-    :return: The hiragana word
+    :return: All possible kana parsings of the word with the dictionary
     """
     i = 0
     kana_word = ""
@@ -109,16 +109,26 @@ def romaji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str:
 
 
 def romaji_to_hiragana(word) -> list[str]:
+    """
+    Converts a string to a list of possible hiragana
+    :param word:
+    :return: All possible hiragana parsings of the word
+    """
+    if all(c in set_hira for c in word):
+        return [word]
     kata = romaji_to_katakana(word)
     return [katakana_to_hiragana(k) for k in kata]
 
 
 def romaji_to_katakana(word: str) -> list[str]:
     """
-    Converts a string to katakana, returns None if it isn't valid romaji
+    Converts a string to a list of possible katakana
     :param word: The word to convert
-    :return: The katakana word
+    :return: All possible katakana parsings of the word
     """
+    if all(c in set_kata for c in word):
+        return [word]
+
     kata = romaji_to_kana(word, romaji_to_katakana_dict, 'ッ')
     if not kata:
         return []
@@ -272,6 +282,9 @@ hiragana_to_katakana_dict = {**{vh: vk for kk, vk in romaji_to_katakana_dict.ite
                                 kh, vh in romaji_to_hiragana_dict.items() if kk == kh},
                              **{'ゃ': 'ャ', 'ゅ': 'ュ', 'ょ': 'ョ'}}
 katakana_to_hiragana_dict = {v: k for k, v in hiragana_to_katakana_dict.items()}
+
+set_hira = {v[-1] for _, v in romaji_to_hiragana_dict.items()}
+set_kata = {**{v[-1] for _, v in romaji_to_katakana_dict.items()}, **{'ー'}}
 
 set_a = {'ア', 'カ', 'サ', 'タ', 'ナ', 'ハ', 'マ', 'ヤ', 'ラ', 'ワ', 'ガ', 'ザ', 'ダ', 'バ', 'パ'}
 set_i = {'イ', 'キ', 'シ', 'チ', 'ニ', 'ヒ', 'ミ', 'リ', 'ギ', 'ジ', 'ヂ', 'ビ', 'ピ', 'ィ'}
