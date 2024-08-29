@@ -58,14 +58,15 @@ async def duel(
             f"{user.mention}, you have been challenged to a duel by {inter.user.mention}!"
         )
         try:
-            bot.wait_for(
+            await bot.wait_for(
                 'message',
                 check=lambda m: m.author == user and m.content.lower() == "I accept this duel".lower(),
                 timeout=30.0
             )
+            await initiate_duel(inter, [[user], [inter.user]], mode, chat)
         except asyncio.TimeoutError:
             await inter.response.edit_message(f"{user.mention} has declined the duel.")
-        return await initiate_duel(inter, [[user], [inter.user]], mode, chat)
+        return
 
     view = botutils.get_view([user], lambda: initiate_duel(inter, [[user], [inter.user]], mode, chat))
 
