@@ -288,12 +288,13 @@ katakana_to_romaji_dict = {v: k for k, v in romaji_to_katakana_dict.items()}
 hiragana_to_romaji_dict = {v: k for k, v in romaji_to_hiragana_dict.items()}
 hiragana_to_katakana_dict = {**{vh: vk for kk, vk in romaji_to_katakana_dict.items() for
                                 kh, vh in romaji_to_hiragana_dict.items() if kk == kh},
-                             **{'ゃ': 'ャ', 'ゅ': 'ュ', 'ょ': 'ョ'}}
+                             **{'ゃ': 'ャ', 'ゅ': 'ュ', 'ょ': 'ョ', 'っ': 'ッ'}}
 katakana_to_hiragana_dict = {v: k for k, v in hiragana_to_katakana_dict.items()}
 
 set_hira = {v[-1] for _, v in romaji_to_hiragana_dict.items()}
+set_hira.union({'っ'})
 set_kata = {v[-1] for _, v in romaji_to_katakana_dict.items()}
-set_kata.add('ー')
+set_kata.union({'ー', 'ッ', 'ヶ', 'ヵ'})
 set_kata_mora = {v for _, v in romaji_to_katakana_dict.items()}
 
 set_a = {'ア', 'カ', 'サ', 'タ', 'ナ', 'ハ', 'マ', 'ヤ', 'ラ', 'ワ', 'ガ', 'ザ', 'ダ', 'バ', 'パ'}
