@@ -52,7 +52,9 @@ async def search_jisho(term: str) -> dict:
             if not reading or len(reading) <= 1:
                 continue
             word_info = {'word': y['word'],
-                         'meanings': [sense['english_definitions'][0] for sense in x['senses']]}
+                         'meanings': [sense['english_definitions'][0] for sense in x['senses']],
+                         'reading': reading
+                         }
 
             if reading in words:
                 words[reading].append(word_info)
@@ -67,21 +69,40 @@ async def get_words_starting_with(word: str) -> dict:
     return {k: v for k, v in words.items() if k.startswith(start)}
 
 
-def meaning_to_string(meanings: list[dict], hiragana: str, katakana: str, num: int = 3) -> str:
+def meaning_to_string(meanings: list[dict], num: int = 3) -> str:
+    """
+    Converts a list of meanings to a string for sending
+
+    :param meanings: List of meanings
+    :param num: How many meanings to include
+    :return: String of meanings
+    """
     out = []
     for i in range(num):
         if i >= len(meanings):
             break
         meaning = meanings[i]
-        kanji = meaning['word'] or katakana
-        reading = f" ({hiragana})" if hiragana else ""
-        out.append(f"{kanji}{reading}:\n> {', '.join(meaning['meanings'])}")
+        kanji_reading = f"{meaning['word']} ({meaning['reading']})" if meaning['word'] else meaning['reading']
+        out.append(f"{kanji_reading}:\n> {', '.join(meaning['meanings'])}")
     return "\n".join(out)
+
+
+def remove_romaji_long_vowels(romaji: str) -> str:
+    """
+    Removes long vowels from a romaji string, does not affect non-romaji characters
+
+    :param romaji: Romaji string    :return:  without long vowels
+    """
+    return (romaji.replace('aa', 'a')
+            .replace('ii', 'i').replace('uu', 'u')
+            .replace('ee', 'e').replace('oo', 'o')
+            .replace('ou', 'o').replace('ei', 'e'))
 
 
 def romaji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str:
     """
     Converts a string to a list of possible kana, using a specified dictionary
+
     :param tsu: Small tsu to use
     :param dictionary: The dictionary to use
     :param word: The word to convert
@@ -167,7 +188,8 @@ def romaji_to_hira_kata(word: str) -> tuple[list[str], list[str]]:
     return hira, kata
 
 
-def kana_to_romaji(kana: str, dictionary: dict) -> str:
+def kana_to_romaji(kana: str) -> str:
+    dictionary = {**hiragana_to_romaji_dict, **katakana_to_romaji_dict}
     romaji = ""
     i = 0
     while True:
@@ -194,14 +216,6 @@ def kana_to_romaji(kana: str, dictionary: dict) -> str:
         else:
             return ""
     return romaji
-
-
-def katakana_to_romaji(kata: str) -> str:
-    return kana_to_romaji(kata, katakana_to_romaji_dict)
-
-
-def hiragana_to_romaji(hira: str) -> str:
-    return kana_to_romaji(hira, hiragana_to_romaji_dict)
 
 
 def hiragana_to_katakana(hira: str) -> str:

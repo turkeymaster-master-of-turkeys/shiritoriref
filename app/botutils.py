@@ -59,7 +59,7 @@ async def take_bot_turn(
     if hira_candidates:
         hira = hira_candidates[random.randint(0, len(hira_candidates) - 1)]
         kata = translationtools.hiragana_to_katakana(hira)
-        await inter.channel.send(translationtools.meaning_to_string(words_hira[hira], hira, kata))
+        await inter.channel.send(translationtools.meaning_to_string(words_hira[hira]))
         return hira, kata
 
     words_kata = await translationtools.get_words_starting_with(prev_kata)
@@ -119,6 +119,7 @@ async def process_player_response(
         await inter.channel.send(f"{team_to_string(current)} has ended the game.")
         return False, "", "", None
 
+    romaji = translationtools.remove_romaji_long_vowels(response)
     hira, kata = translationtools.romaji_to_hira_kata(response)
 
     logger.info(f"{team_to_string(current)} played {response}")
@@ -142,24 +143,38 @@ async def process_player_response(
     if not valid:
         return await invalid_word(invalid[0]), "", "", None
 
-    for (katakana, hiragana) in valid:
-        words_romaji = {}
+    katakana, hiragana = valid[0]
+    for i in range(len(valid)):
+        katakana, hiragana = valid[i]
+        words_hira = {}
         if hiragana:
-            words_romaji = await translationtools.search_jisho(hiragana)
-            logger.info(f"Checking for {hiragana} in {words_romaji.keys()}")
+            words_hira = await translationtools.search_jisho(hiragana)
+            logger.info(f"Checking for {hiragana} in {words_hira.keys()}")
         logger.info(katakana)
         words_kata = await translationtools.search_jisho(katakana)
         logger.info(f"Checking for {katakana} in {words_kata.keys()}")
 
-        if (hiragana and hiragana in words_romaji) or katakana in words_kata:
+        if (hiragana and hiragana in words_hira) or katakana in words_kata:
             break
     else:
-        return await invalid_word(f"is not a valid word."), "", "", None
+        words_romaji = {translationtools.kana_to_romaji(k): v
+                        for k, v in (await translationtools.search_jisho(romaji)).items()}
+        logger.info(f"Romaji dictionary: {str(words_romaji.keys())}")
+        normalised = translationtools.kana_to_romaji(katakana)
+        if normalised not in words_romaji:
+            return await invalid_word(f"is not a valid word."), "", "", None
+        matches = words_romaji[normalised]
+        await inter.channel.send(translationtools.meaning_to_string(matches))
+        reading = matches[0]['reading']
+        return (True,
+                translationtools.katakana_to_hiragana(reading),
+                translationtools.hiragana_to_katakana(reading),
+                response_msg.author)
 
-    matches = ((words_romaji[hiragana] if hiragana in words_romaji else []) +
+    matches = ((words_hira[hiragana] if hiragana in words_hira else []) +
                (words_kata[katakana] if katakana in words_kata else []))
 
-    await inter.channel.send(translationtools.meaning_to_string(matches, hiragana, katakana))
+    await inter.channel.send(translationtools.meaning_to_string(matches))
 
     return True, katakana, hiragana, response_msg.author
 
@@ -168,9 +183,9 @@ async def announce_previous_word(inter: nextcord.Interaction, prev_kata: str, pr
     last_hira = (prev_hira[-1] if prev_hira[-1] not in "ゃゅょ" else prev_hira[-2:]) if prev_hira else ""
     last_kata = translationtools.normalise_katakana(prev_kata)[-1] \
         if prev_kata[-1] not in "ャュョァィェォ" else prev_kata[-2:]
-    romaji = translationtools.hiragana_to_romaji(prev_hira) if prev_hira else (
-        translationtools.katakana_to_romaji(prev_kata))
-    last_romaji = translationtools.hiragana_to_romaji(last_hira) or translationtools.katakana_to_romaji(last_kata)
+    romaji = translationtools.kana_to_romaji(prev_hira) if prev_hira else (
+        translationtools.kana_to_romaji(prev_kata))
+    last_romaji = translationtools.kana_to_romaji(last_hira) or translationtools.kana_to_romaji(last_kata)
     await inter.channel.send(
         f"The word was: {prev_hira or prev_kata} ({romaji})\n"
         f"The letter to start is:"
