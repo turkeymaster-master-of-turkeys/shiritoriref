@@ -186,6 +186,8 @@ def get_invalid_reasons(
         return ""
     elif not kata:
         return "is not a valid Romaji word!"
+    elif kata in translationtools.set_kata_mora:
+        return "is only one mora!"
     elif kata in words_state['played_words']:
         return "has already been played!"
     elif not translationtools.match_kana(prev_kata, kata) and not translationtools.match_kana(prev_hira, hira):
