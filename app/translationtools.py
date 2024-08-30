@@ -214,7 +214,7 @@ def kana_to_romaji(kana: str) -> str:
                 romaji += dictionary[kana[i - 2:i]][-1]
             i += 1
         else:
-            return ""
+            return kana
     return romaji
 
 

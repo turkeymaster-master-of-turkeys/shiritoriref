@@ -119,8 +119,9 @@ async def process_player_response(
         await inter.channel.send(f"{team_to_string(current)} has ended the game.")
         return False, "", "", None
 
-    romaji = translationtools.remove_romaji_long_vowels(response)
-    hira, kata = translationtools.romaji_to_hira_kata(response)
+    romaji_response = translationtools.kana_to_romaji(response)
+    romaji = translationtools.remove_romaji_long_vowels(romaji_response)
+    hira, kata = translationtools.romaji_to_hira_kata(translationtools.kana_to_romaji(romaji_response))
 
     logger.info(f"{team_to_string(current)} played {response}")
 
@@ -167,8 +168,8 @@ async def process_player_response(
         await inter.channel.send(translationtools.meaning_to_string(matches))
         reading = matches[0]['reading']
         return (True,
-                translationtools.katakana_to_hiragana(reading),
                 translationtools.hiragana_to_katakana(reading),
+                translationtools.katakana_to_hiragana(reading),
                 response_msg.author)
 
     matches = ((words_hira[hiragana] if hiragana in words_hira else []) +
