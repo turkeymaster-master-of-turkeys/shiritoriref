@@ -7,6 +7,7 @@ from nextcord import SlashOption
 from nextcord.ext import commands
 import botutils
 from dotenv import load_dotenv
+from constants import *
 
 load_dotenv()
 
@@ -43,7 +44,7 @@ async def duel(
         input_mode: str = SlashOption(description="The lowest allowed level input mode of the duel. Default: romaji",
                                       choices=["romaji", "kana", "kanji"], required=False, default="romaji"),
         chat: str = SlashOption(description="Enable chatting during the duel."
-                                            " Start words with \"> \" to submit in chat mode. Default: on",
+                                            " Start words with \"> \" or \"、 \" to submit in chat mode. Default: on",
                                 choices=["on", "off"], required=False, default="on")
 ):
     if user == inter.user:
@@ -63,7 +64,7 @@ async def duel(
             await bot.wait_for(
                 'message',
                 check=lambda m: m.author == user and m.content.lower() == "I accept this duel".lower(),
-                timeout=30.0
+                timeout=TIME_NORMAL
             )
             await initiate_duel(inter, [[user], [inter.user]], pace, input_mode, chat)
         except asyncio.TimeoutError:
@@ -118,7 +119,7 @@ async def battle(
         input_mode: str = SlashOption(description="The lowest allowed level input mode of the battle. Default: romaji",
                                       choices=["romaji", "kana", "kanji"], required=False, default="romaji"),
         chat: str = SlashOption(description="Enable chatting during the duel."
-                                            " Start words with \"> \" to submit in chat mode. Default: on",
+                                            " Start words with \"> \" or \"、\" to submit in chat mode. Default: on",
                                 choices=["on", "off"], required=False, default="on")
 ):
     team_1 = list(set(bot.parse_mentions(team1)))
@@ -173,7 +174,7 @@ async def initiate_duel(
     num_words_played = {user: 0 for team in teams for user in team}
 
     async def wait_callback(check):
-        return await bot.wait_for('message', timeout=15.0 if pace == "speed" else 60.0, check=check)
+        return await bot.wait_for('message', timeout=TIME_SPEED if pace == "speed" else TIME_NORMAL, check=check)
 
     async def knockout_team(team: list[nextcord.User]) -> list[nextcord.User]:
         index = teams.index(team)

@@ -7,6 +7,7 @@ import nextcord.ui
 from nextcord import ButtonStyle
 
 import translationtools
+from constants import *
 
 logger = logging.getLogger("shiritori-ref")
 
@@ -17,7 +18,7 @@ class DuelView(nextcord.ui.View):
                  callback: Callable[[], Awaitable[None]],
                  edit_message: str
                  ):
-        super().__init__(timeout=180)
+        super().__init__(timeout=DUEL_TIMEOUT)
         self.team = team
         self.callback = callback
         self.message = None
@@ -102,23 +103,24 @@ async def take_user_turn(
         lose_life: Callable[[str], Awaitable[None]],
 ) -> (bool, str, str, nextcord.User):
     await inter.channel.send(f"{team_to_string(current)}, your move!"
-                             f" You have {15 if pace == 'Speed' else 60} seconds to respond.")
+                             f" You have {TIME_SPEED if pace == 'speed' else TIME_NORMAL} seconds to respond.")
 
     if words_state['prev_kata']:
         await announce_previous_word(inter, words_state['prev_kata'], words_state['prev_kanji'])
 
     try:
         def check(msg: nextcord.Message):
+            logger.info(msg.content[0:2])
             return (msg.channel == inter.channel and msg.author in current and
-                    (chat == "off" or msg.content[0:2] == "> "))
+                    (chat == "off" or msg.content[0:2] in MESSAGE_BEGIN))
 
         response_msg = (await wait_callback(check))
     except asyncio.TimeoutError:
         await inter.channel.send(f"{team_to_string(current, mention=True)} took too long to respond. You lose!")
         return False, "", "", None
 
-    response: str = response_msg.content[2 if response_msg.content.startswith("> ") else 0:].lower()
-    if response == "> end":
+    response: str = response_msg.content[2 if response_msg.content[0:2] in MESSAGE_BEGIN else 0:].lower()
+    if response == END_DUEL:
         await inter.channel.send(f"{team_to_string(current)} has ended the game.")
         return False, "", "", None
 
