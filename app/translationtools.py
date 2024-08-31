@@ -232,6 +232,14 @@ def katakana_to_hiragana(kata: str) -> str:
     return hira
 
 
+def is_romaji(word: str) -> bool:
+    return all(c in set_romaji for c in word)
+
+
+def is_kana(word: str) -> bool:
+    return all(c in set_hira.union(set_kata) for c in word)
+
+
 romaji_to_hiragana_dict: dict[str, str] = {
     'a': 'あ', 'i': 'い', 'u': 'う', 'e': 'え', 'o': 'お',
     'ka': 'か', 'ki': 'き', 'ku': 'く', 'ke': 'け', 'ko': 'こ',
@@ -310,6 +318,7 @@ set_hira.union({'っ'})
 set_kata = {v[-1] for _, v in romaji_to_katakana_dict.items()}
 set_kata.union({'ー', 'ッ', 'ヶ', 'ヵ'})
 set_kata_mora = {v for _, v in romaji_to_katakana_dict.items()}
+set_romaji = set("abdefghijkmnoprstuvwyz")
 
 set_a = {'ア', 'カ', 'サ', 'タ', 'ナ', 'ハ', 'マ', 'ヤ', 'ラ', 'ワ', 'ガ', 'ザ', 'ダ', 'バ', 'パ'}
 set_i = {'イ', 'キ', 'シ', 'チ', 'ニ', 'ヒ', 'ミ', 'リ', 'ギ', 'ジ', 'ヂ', 'ビ', 'ピ', 'ィ'}

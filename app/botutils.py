@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import random
+from typing import Callable, Awaitable
+
 import nextcord.ui
 from nextcord import Interaction, ButtonStyle
 from nextcord.ui import Button, View
@@ -69,7 +71,7 @@ async def take_bot_turn(
 
     if kata_candidates:
         kata = kata_candidates[random.randint(0, len(kata_candidates) - 1)]
-        await inter.channel.send(translationtools.meaning_to_string(words_kata[kata], "", kata))
+        await inter.channel.send(translationtools.meaning_to_string(words_kata[kata]))
         return "", kata
 
     await inter.channel.send("I have no words to play! You win!")
@@ -82,8 +84,8 @@ async def take_user_turn(
         current: list[nextcord.User],
         mode: str, chat: str,
         words_state: dict[str, str],
-        wait_callback,
-        lose_life,
+        wait_callback: Callable[[Callable[[nextcord.Message], bool]], Awaitable[nextcord.Message]],
+        lose_life: Callable[[str], Awaitable[None]],
 ) -> (bool, str, str, nextcord.User):
     prev_kata = words_state['prev_kata']
     prev_hira = words_state['prev_hira']
@@ -104,26 +106,30 @@ async def take_user_turn(
         await inter.channel.send(f"{team_to_string(current, mention=True)} took too long to respond. You lose!")
         return False, "", "", None
 
-    return await process_player_response(inter, response_msg, current, words_state, lose_life)
-
-
-async def process_player_response(
-        inter: nextcord.Interaction,
-        response_msg: nextcord.Message,
-        current: list[nextcord.User],
-        words_state: dict[str, str],
-        lose_life,
-) -> (bool, str, str, int):
     response: str = response_msg.content[2 if response_msg.content.startswith("> ") else 0:].lower()
     if response == "> end":
         await inter.channel.send(f"{team_to_string(current)} has ended the game.")
         return False, "", "", None
 
-    romaji_response = translationtools.kana_to_romaji(response)
-    romaji = translationtools.remove_romaji_long_vowels(romaji_response)
-    hira, kata = translationtools.romaji_to_hira_kata(translationtools.kana_to_romaji(romaji_response))
+    logger.info(f"{response_msg.author.global_name} played {response}")
 
-    logger.info(f"{team_to_string(current)} played {response}")
+    if translationtools.is_romaji(response):
+        return await process_player_romaji(inter, response, response_msg.author, words_state, lose_life)
+    elif translationtools.is_kana(response):
+        return await process_player_kana(inter, response, response_msg.author, words_state, lose_life)
+    else:
+        return await process_player_kanji(inter, response, response_msg.author, words_state, lose_life)
+
+
+async def process_player_romaji(
+        inter: nextcord.Interaction,
+        response: str,
+        author: nextcord.User,
+        words_state: dict[str, str],
+        lose_life: Callable[[str], Awaitable[None]],
+) -> (bool, str, str, int):
+    romaji = translationtools.remove_romaji_long_vowels(response)
+    hira, kata = translationtools.romaji_to_hira_kata(translationtools.kana_to_romaji(response))
 
     if not hira and not kata:
         await inter.channel.send(f"{response} is not a valid romaji word.")
@@ -144,40 +150,42 @@ async def process_player_response(
     if not valid:
         return await invalid_word(invalid[0]), "", "", None
 
-    katakana, hiragana = valid[0]
-    for i in range(len(valid)):
-        katakana, hiragana = valid[i]
-        words_hira = {}
-        if hiragana:
-            words_hira = await translationtools.search_jisho(hiragana)
-            logger.info(f"Checking for {hiragana} in {words_hira.keys()}")
-        logger.info(katakana)
-        words_kata = await translationtools.search_jisho(katakana)
-        logger.info(f"Checking for {katakana} in {words_kata.keys()}")
+    words_romaji = {translationtools.kana_to_romaji(k): v
+                    for k, v in (await translationtools.search_jisho(romaji)).items()}
+    logger.info(f"Romaji dictionary: {str(words_romaji.keys())}")
+    normalised = translationtools.kana_to_romaji(kata[0])
 
-        if (hiragana and hiragana in words_hira) or katakana in words_kata:
-            break
-    else:
-        words_romaji = {translationtools.kana_to_romaji(k): v
-                        for k, v in (await translationtools.search_jisho(romaji)).items()}
-        logger.info(f"Romaji dictionary: {str(words_romaji.keys())}")
-        normalised = translationtools.kana_to_romaji(katakana)
-        if normalised not in words_romaji:
-            return await invalid_word(f"is not a valid word."), "", "", None
-        matches = words_romaji[normalised]
-        await inter.channel.send(translationtools.meaning_to_string(matches))
-        reading = matches[0]['reading']
-        return (True,
-                translationtools.hiragana_to_katakana(reading),
-                translationtools.katakana_to_hiragana(reading),
-                response_msg.author)
+    if normalised not in words_romaji and response not in words_romaji:
+        return await invalid_word(f"is not a valid word."), "", "", None
 
-    matches = ((words_hira[hiragana] if hiragana in words_hira else []) +
-               (words_kata[katakana] if katakana in words_kata else []))
-
+    matches = words_romaji.get(normalised) or words_romaji.get(response)
     await inter.channel.send(translationtools.meaning_to_string(matches))
+    reading = matches[0]['reading']
 
-    return True, katakana, hiragana, response_msg.author
+    return (True,
+            translationtools.hiragana_to_katakana(reading),
+            translationtools.katakana_to_hiragana(reading),
+            author)
+
+
+async def process_player_kana(
+        inter: nextcord.Interaction,
+        response: str,
+        author: nextcord.User,
+        words_state: dict[str, str],
+        lose_life: Callable[[str], Awaitable[None]],
+) -> (bool, str, str, int):
+    return False, "", "", None
+
+
+async def process_player_kanji(
+        inter: nextcord.Interaction,
+        response: str,
+        author: nextcord.User,
+        words_state: dict[str, str],
+        lose_life: Callable[[str], Awaitable[None]],
+) -> (bool, str, str, int):
+    return False, "", "", None
 
 
 async def announce_previous_word(inter: nextcord.Interaction, prev_kata: str, prev_hira: str) -> None:
