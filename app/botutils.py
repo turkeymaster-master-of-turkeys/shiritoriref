@@ -103,7 +103,7 @@ async def take_user_turn(
         lose_life: Callable[[str], Awaitable[None]],
 ) -> (bool, str, str, nextcord.User):
     await inter.channel.send(f"{team_to_string(current)}, your move!"
-                             f" You have {TIME_SPEED if pace == 'speed' else TIME_NORMAL} seconds to respond.")
+                             f" You have {TIME_SPEED if pace == PACE_SPEED else TIME_NORMAL} seconds to respond.")
 
     if words_state['prev_kata']:
         await announce_previous_word(inter, words_state['prev_kata'], words_state['prev_kanji'])
@@ -127,12 +127,12 @@ async def take_user_turn(
     logger.info(f"{response_msg.author.global_name} played {response}")
 
     if translationtools.is_romaji(response):
-        if input_mode == "romaji":
+        if input_mode == INPUT_ROMAJI:
             return await process_player_romaji(inter, response, response_msg.author, words_state, lose_life)
         else:
             await inter.channel.send(f"You can't use romaji in this mode!")
             return True, "", "", None
-    elif translationtools.is_kana(response) and input_mode != "kanji":
+    elif translationtools.is_kana(response) and input_mode != INPUT_KANJI:
         return await process_player_kana(inter, response, response_msg.author, words_state, lose_life)
     else:
         return await process_player_kanji(inter, response, response_msg.author, words_state, lose_life)

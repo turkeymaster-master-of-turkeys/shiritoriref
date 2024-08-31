@@ -19,11 +19,8 @@ logger = logging.getLogger("shiritori-ref")
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    filename='app.log',
-    filemode='a'
+    datefmt='%Y-%m-%d %H:%M:%S'
 )
-logger.addHandler(logging.StreamHandler())
 
 
 @bot.event
@@ -40,7 +37,7 @@ async def duel(
         inter: nextcord.Interaction,
         user: nextcord.User = SlashOption(description="The person you want to duel", required=True),
         pace: str = SlashOption(description="The pace of the duel. Normal - 60s, Speed - 15s. Default: normal",
-                                choices=["normal", "speed"], required=False, default="normal"),
+                                choices=[PACE_NORMAL, PACE_SPEED], required=False, default=PACE_NORMAL),
         input_mode: str = SlashOption(description="The lowest allowed level input mode of the duel. Default: romaji",
                                       choices=["romaji", "kana", "kanji"], required=False, default="romaji"),
         chat: str = SlashOption(description="Enable chatting during the duel."
@@ -89,7 +86,7 @@ async def survive(
         players: str = SlashOption(description="The players in the game", required=False),
         vs_ref: bool = SlashOption(description="Play against the bot. default: true", required=False, default=True),
         pace: str = SlashOption(description="The pace of the game. Normal - 60s, Speed - 15s. Default: normal",
-                                choices=["normal", "speed"], required=False, default="normal"),
+                                choices=[PACE_NORMAL, PACE_SPEED], required=False, default=PACE_NORMAL),
         input_mode: str = SlashOption(description="The lowest allowed level input mode of the game. Default: romaji",
                                       choices=["romaji", "kana", "kanji"], required=False, default="romaji"),
         chat: str = SlashOption(description="Enable chatting during the game.", required=False)
@@ -116,7 +113,7 @@ async def battle(
         team4: str = SlashOption(description="The fourth team", required=False),
         team5: str = SlashOption(description="The fifth team", required=False),
         pace: str = SlashOption(description="The pace of the battle. Normal - 60s, Speed - 15s. Default: normal",
-                                choices=["normal", "speed"], required=False, default="normal"),
+                                choices=[PACE_NORMAL, PACE_SPEED], required=False, default=PACE_NORMAL),
         input_mode: str = SlashOption(description="The lowest allowed level input mode of the battle. Default: romaji",
                                       choices=["romaji", "kana", "kanji"], required=False, default="romaji"),
         chat: str = SlashOption(description="Enable chatting during the duel."
@@ -171,7 +168,7 @@ async def initiate_duel(
     num_words_played = {user: 0 for team in teams for user in team}
 
     async def wait_callback(check):
-        return await bot.wait_for('message', timeout=TIME_SPEED if pace == "speed" else TIME_NORMAL, check=check)
+        return await bot.wait_for('message', timeout=TIME_SPEED if pace == PACE_SPEED else TIME_NORMAL, check=check)
 
     async def knockout_team(team: list[nextcord.User]) -> list[nextcord.User]:
         index = teams.index(team)
