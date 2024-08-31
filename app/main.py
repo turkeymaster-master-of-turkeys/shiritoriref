@@ -68,9 +68,10 @@ async def duel(
             await inter.response.edit_message(f"{user.mention} has declined the duel.")
         return
 
-    view = botutils.get_view([user], lambda: initiate_duel(inter, [[user], [inter.user]], mode, chat))
-
-    await inter.response.send_message(
+    view = botutils.DuelView(
+        [user], lambda: initiate_duel(inter, [[user], [inter.user]], mode, chat),
+        "The duel request has timed out.")
+    view.message = await inter.response.send_message(
         f"{user.mention}, you have been challenged to a duel by {inter.user.mention}!", view=view)
 
 
@@ -134,11 +135,13 @@ async def battle(
         await initiate_duel(inter, teams, mode, chat)
         return
 
-    view = botutils.get_view(t, lambda: initiate_duel(inter, teams, mode, chat))
-
-    await inter.response.send_message(f"{inter.user.display_name} has requested a battle!\n" +
-                                      " vs ".join([botutils.team_to_string(team, mention=True) for team in teams]),
-                                      view=view)
+    view = botutils.DuelView(
+        t, lambda: initiate_duel(inter, teams, mode, chat),
+        "The battle request has timed out.")
+    view.message = await inter.response.send_message(
+        f"{inter.user.display_name} has requested a battle!\n" +
+        " vs ".join([botutils.team_to_string(team, mention=True) for team in teams]),
+        view=view)
 
 
 async def initiate_duel(

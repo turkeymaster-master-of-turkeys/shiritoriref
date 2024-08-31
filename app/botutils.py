@@ -4,42 +4,48 @@ import random
 from typing import Callable, Awaitable
 
 import nextcord.ui
-from nextcord import Interaction, ButtonStyle
-from nextcord.ui import Button, View
+from nextcord import ButtonStyle
 
 import translationtools
 
 logger = logging.getLogger("shiritori-ref")
 
 
-def get_view(team: list[nextcord.User], callback) -> nextcord.ui.view.View:
-    accept_button = Button(label="Accept", style=ButtonStyle.green)
-    decline_button = Button(label="Decline", style=ButtonStyle.red)
+class DuelView(nextcord.ui.View):
+    def __init__(self,
+                 team: list[nextcord.User],
+                 callback: Callable[[], Awaitable[None]],
+                 edit_message: str
+                 ):
+        super().__init__(timeout=180)
+        self.team = team
+        self.callback = callback
+        self.message = None
+        self.edit_message = edit_message
 
-    view = View()
-    view.add_item(accept_button)
-    view.add_item(decline_button)
-
-    async def accept_callback(interaction: Interaction) -> None:
-        if interaction.user not in team:
+    @nextcord.ui.button(label="Accept", style=ButtonStyle.green)
+    async def accept_callback(self, interaction: nextcord.Interaction):
+        if interaction.user not in self.team:
             await interaction.response.send_message("You cannot accept a duel for someone else!", ephemeral=True)
             return
-        await interaction.response.edit_message(content=f"{team_to_string(team)} {'have' if len(team) > 1 else 'has'}"
-                                                        f" accepted the duel!", view=None)
-        await callback()
+        await interaction.response.edit_message(
+            content=f"{team_to_string(self.team)} {'have' if len(self.team) > 1 else 'has'}  accepted the duel!",
+            view=None)
+        self.stop()
+        await self.callback()
 
-    # Callback function for declining the duel
-    async def decline_callback(interaction: Interaction):
-        if interaction.user not in team:
+    @nextcord.ui.button(label="Decline", style=ButtonStyle.red)
+    async def decline_callback(self, interaction: nextcord.Interaction):
+        if interaction.user not in self.team:
             await interaction.response.send_message("You cannot decline a duel for someone else!", ephemeral=True)
             return
-        await interaction.response.edit_message(content=f"{team_to_string(team)} {'have' if len(team) > 1 else 'has'}"
+        await interaction.response.edit_message(content=f"{team_to_string(self.team)} {'have' if len(self.team) > 1 else 'has'}"
                                                         f" declined the duel.", view=None)
+        self.stop()
 
-    accept_button.callback = accept_callback
-    decline_button.callback = decline_callback
-
-    return view
+    async def on_timeout(self):
+        if self.message:
+            await self.message.edit(content=self.edit_message, view=None)
 
 
 async def take_bot_turn(
