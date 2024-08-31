@@ -177,11 +177,6 @@ def romaji_to_hira_kata(word: str) -> tuple[list[str], list[str]]:
     :param word: The word to convert
     :return: All possible hiragana and katakana parsings of the word
     """
-    if all(c in set_hira for c in word):
-        return [word], [hiragana_to_katakana(word)]
-    if all(c in set_kata for c in word):
-        return [katakana_to_hiragana(word)], [word]
-
     kata, kata_no_choonpu = romaji_to_katakana(word)
     hira = [katakana_to_hiragana(k) for k in kata_no_choonpu]
 
@@ -318,7 +313,7 @@ set_hira.union({'っ'})
 set_kata = {v[-1] for _, v in romaji_to_katakana_dict.items()}
 set_kata.union({'ー', 'ッ', 'ヶ', 'ヵ'})
 set_kata_mora = {v for _, v in romaji_to_katakana_dict.items()}
-set_romaji = set("abdefghijkmnoprstuvwyz")
+set_romaji = set("abcdefghijkmnoprstuvwyz")
 
 set_a = {'ア', 'カ', 'サ', 'タ', 'ナ', 'ハ', 'マ', 'ヤ', 'ラ', 'ワ', 'ガ', 'ザ', 'ダ', 'バ', 'パ'}
 set_i = {'イ', 'キ', 'シ', 'チ', 'ニ', 'ヒ', 'ミ', 'リ', 'ギ', 'ジ', 'ヂ', 'ビ', 'ピ', 'ィ'}

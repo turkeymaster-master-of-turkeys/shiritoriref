@@ -155,7 +155,6 @@ async def initiate_duel(
     current = teams[0]
     words_state = {
         "prev_kata": "",
-        "prev_hira": "",
         "played_words": set()
     }
     lives = {team[0].id: 3 for team in teams}
@@ -194,7 +193,6 @@ async def initiate_duel(
             if played_kata:
                 words_state = {
                     "prev_kata": played_kata,
-                    "prev_hira": played_hira,
                     "played_words": words_state['played_words'].union({played_kata})
                 }
                 current = teams[(teams.index(current) + 1) % len(teams)]
@@ -205,7 +203,7 @@ async def initiate_duel(
 
         await botutils.announce_streak(inter, streak)
 
-        (cont, played_kata, played_hira, player) = await botutils.take_user_turn(
+        (cont, played_kata, player) = await botutils.take_user_turn(
             inter, current, mode, chat, words_state, wait_callback, lose_life
         )
 
@@ -219,7 +217,6 @@ async def initiate_duel(
 
         words_state = {
             "prev_kata": played_kata,
-            "prev_hira": played_hira,
             "played_words": words_state['played_words'].union({played_kata})
         }
         current = teams[(teams.index(current) + 1) % len(teams)]
