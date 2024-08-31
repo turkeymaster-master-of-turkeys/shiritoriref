@@ -19,9 +19,9 @@ def match_kana(prev: str, curr: str) -> bool:
 def normalise_katakana(katakana: str) -> str:
     def choonpu_to_kana(kana: str) -> str:
         return kana in set_a and 'ア' or \
-            kana in set_e and 'エ' or \
+            kana in set_e and 'イ' or \
             kana in set_i and 'イ' or \
-            kana in set_o and 'オ' or \
+            kana in set_o and 'ウ' or \
             kana in set_u and 'ウ' or \
             kana
 
@@ -308,10 +308,8 @@ hiragana_to_katakana_dict = {**{vh: vk for kk, vk in romaji_to_katakana_dict.ite
                              **{'ゃ': 'ャ', 'ゅ': 'ュ', 'ょ': 'ョ', 'っ': 'ッ'}}
 katakana_to_hiragana_dict = {v: k for k, v in hiragana_to_katakana_dict.items()}
 
-set_hira = {v[-1] for _, v in romaji_to_hiragana_dict.items()}
-set_hira.union({'っ'})
-set_kata = {v[-1] for _, v in romaji_to_katakana_dict.items()}
-set_kata.union({'ー', 'ッ', 'ヶ', 'ヵ'})
+set_hira = {v[-1] for _, v in romaji_to_hiragana_dict.items()}.union({'っ'})
+set_kata = {v[-1] for _, v in romaji_to_katakana_dict.items()}.union({'ー', 'ッ', 'ヶ', 'ヵ'})
 set_kata_mora = {v for _, v in romaji_to_katakana_dict.items()}
 set_romaji = set("abcdefghijkmnoprstuvwyz")
 

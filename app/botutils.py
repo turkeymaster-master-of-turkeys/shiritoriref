@@ -173,7 +173,23 @@ async def process_player_kana(
         words_state: dict[str, str],
         lose_life: Callable[[str], Awaitable[None]],
 ) -> (bool, str, str, int):
-    return False, "", "", None
+    words = await translationtools.search_jisho(response)
+
+    if not words:
+        await lose_life(f"{response} is not a valid word.")
+        return True, "", "", None
+
+    invalid = get_invalid_reasons(response, words_state)
+    if invalid:
+        await lose_life(f"{response} {invalid}")
+        return True, "", "", None
+
+    await inter.channel.send(translationtools.meaning_to_string(words[response]))
+
+    kata = translationtools.hiragana_to_katakana(response)
+    kanji = words[response][0]['word'] or words[response][0]['reading']
+
+    return True, kata, kanji, author
 
 
 async def process_player_kanji(
@@ -210,7 +226,7 @@ def get_invalid_reasons(
         return "is only one mora!"
     elif kata in words_state['played_words']:
         return "has already been played!"
-    elif not translationtools.match_kana(prev_kata, kata):
+    elif not translationtools.match_kana(prev_kata, translationtools.hiragana_to_katakana(kata)):
         return "does not match the previous word!"
     elif kata[-1] == 'ン':
         return "ends with ん!"
