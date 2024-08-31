@@ -38,8 +38,10 @@ async def on_ready():
 async def duel(
         inter: nextcord.Interaction,
         user: nextcord.User = SlashOption(description="The person you want to duel", required=True),
-        mode: str = SlashOption(description="The mode of the duel. Default: Normal",
+        pace: str = SlashOption(description="The pace of the duel. Normal - 60s, Speed - 15s. Default: normal",
                                 choices=["normal", "speed"], required=False, default="normal"),
+        input_mode: str = SlashOption(description="The lowest allowed level input mode of the duel. Default: romaji",
+                                      choices=["romaji", "kana", "kanji"], required=False, default="romaji"),
         chat: str = SlashOption(description="Enable chatting during the duel."
                                             " Start words with \"> \" to submit in chat mode. Default: on",
                                 choices=["on", "off"], required=False, default="on")
@@ -50,7 +52,7 @@ async def duel(
 
     if user == bot.user:
         await inter.response.send_message("Lets practice Shiritori!")
-        await initiate_duel(inter, [[inter.user], [user]], mode, chat)
+        await initiate_duel(inter, [[inter.user], [user]], pace, input_mode, chat)
         return
 
     if user.bot:
@@ -63,13 +65,13 @@ async def duel(
                 check=lambda m: m.author == user and m.content.lower() == "I accept this duel".lower(),
                 timeout=30.0
             )
-            await initiate_duel(inter, [[user], [inter.user]], mode, chat)
+            await initiate_duel(inter, [[user], [inter.user]], pace, input_mode, chat)
         except asyncio.TimeoutError:
             await inter.response.edit_message(f"{user.mention} has declined the duel.")
         return
 
     view = botutils.DuelView(
-        [user], lambda: initiate_duel(inter, [[user], [inter.user]], mode, chat),
+        [user], lambda: initiate_duel(inter, [[user], [inter.user]], pace, input_mode, chat),
         "The duel request has timed out.")
     view.message = await inter.response.send_message(
         f"{user.mention}, you have been challenged to a duel by {inter.user.mention}!", view=view)
@@ -84,15 +86,19 @@ async def survive(
         inter: nextcord.Interaction,
         players: str = SlashOption(description="The players in the game", required=False),
         vs_ref: bool = SlashOption(description="Play against the bot. default: true", required=False, default=True),
+        pace: str = SlashOption(description="The pace of the game. Normal - 60s, Speed - 15s. Default: normal",
+                                choices=["normal", "speed"], required=False, default="normal"),
+        input_mode: str = SlashOption(description="The lowest allowed level input mode of the game. Default: romaji",
+                                      choices=["romaji", "kana", "kanji"], required=False, default="romaji"),
         chat: str = SlashOption(description="Enable chatting during the game.", required=False)
 ):
     players = list(set(bot.parse_mentions(players) + [inter.user])) if players else [inter.user]
     if vs_ref:
         await inter.response.send_message("Let's practice shiritori!")
-        await initiate_duel(inter, [players, [bot.user]], "normal", chat)
+        await initiate_duel(inter, [players, [bot.user]], pace, input_mode, chat)
     else:
         await inter.response.send_message("Let's start a survival game!")
-        await initiate_duel(inter, [players], "normal", chat)
+        await initiate_duel(inter, [players], pace, input_mode, chat)
 
 
 @bot.slash_command(
@@ -107,8 +113,10 @@ async def battle(
         team3: str = SlashOption(description="The third team", required=False),
         team4: str = SlashOption(description="The fourth team", required=False),
         team5: str = SlashOption(description="The fifth team", required=False),
-        mode: str = SlashOption(description="The mode of the duel. Default: Normal",
+        pace: str = SlashOption(description="The pace of the battle. Normal - 60s, Speed - 15s. Default: normal",
                                 choices=["normal", "speed"], required=False, default="normal"),
+        input_mode: str = SlashOption(description="The lowest allowed level input mode of the battle. Default: romaji",
+                                      choices=["romaji", "kana", "kanji"], required=False, default="romaji"),
         chat: str = SlashOption(description="Enable chatting during the duel."
                                             " Start words with \"> \" to submit in chat mode. Default: on",
                                 choices=["on", "off"], required=False, default="on")
@@ -132,11 +140,11 @@ async def battle(
 
     if bot.user in t:
         await inter.response.send_message("Lets practice Shiritori!")
-        await initiate_duel(inter, teams, mode, chat)
+        await initiate_duel(inter, teams, pace, input_mode, chat)
         return
 
     view = botutils.DuelView(
-        t, lambda: initiate_duel(inter, teams, mode, chat),
+        t, lambda: initiate_duel(inter, teams, pace, input_mode, chat),
         "The battle request has timed out.")
     view.message = await inter.response.send_message(
         f"{inter.user.display_name} has requested a battle!\n" +
@@ -145,11 +153,11 @@ async def battle(
 
 
 async def initiate_duel(
-        inter: nextcord.Interaction, teams: list[list[nextcord.User]], mode, chat
+        inter: nextcord.Interaction, teams: list[list[nextcord.User]], pace: str, input_mode: str, chat: str
 ):
-    if mode in ["normal", "speed"] and len(teams) > 1:
+    if pace in ["normal", "speed"] and len(teams) > 1:
         logger.info(f"{botutils.team_to_string(teams[0])} challenged {botutils.team_to_string(teams[1])}"
-                    f" to a duel in {mode} mode with chat {chat}.")
+                    f" to a duel in {pace} mode with chat {chat}.")
 
     if bot.user not in teams[0]:
         await inter.channel.send(f"{botutils.team_to_string(teams[0])},"
@@ -165,7 +173,7 @@ async def initiate_duel(
     num_words_played = {user: 0 for team in teams for user in team}
 
     async def wait_callback(check):
-        return await bot.wait_for('message', timeout=15.0 if mode == "speed" else 60.0, check=check)
+        return await bot.wait_for('message', timeout=15.0 if pace == "speed" else 60.0, check=check)
 
     async def knockout_team(team: list[nextcord.User]) -> list[nextcord.User]:
         index = teams.index(team)
@@ -209,7 +217,7 @@ async def initiate_duel(
         await botutils.announce_streak(inter, streak)
 
         (cont, played_kata, played_kanji, player) = await botutils.take_user_turn(
-            inter, current, mode, chat, words_state, wait_callback, lose_life
+            inter, current, pace, input_mode, chat, words_state, wait_callback, lose_life
         )
 
         if not cont:

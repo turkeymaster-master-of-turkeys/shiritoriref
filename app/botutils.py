@@ -39,8 +39,9 @@ class DuelView(nextcord.ui.View):
         if interaction.user not in self.team:
             await interaction.response.send_message("You cannot decline a duel for someone else!", ephemeral=True)
             return
-        await interaction.response.edit_message(content=f"{team_to_string(self.team)} {'have' if len(self.team) > 1 else 'has'}"
-                                                        f" declined the duel.", view=None)
+        await interaction.response.edit_message(
+            content=f"{team_to_string(self.team)} {'have' if len(self.team) > 1 else 'has'}"
+                    f" declined the duel.", view=None)
         self.stop()
 
     async def on_timeout(self):
@@ -95,13 +96,13 @@ async def take_bot_turn(
 async def take_user_turn(
         inter: nextcord.Interaction,
         current: list[nextcord.User],
-        mode: str, chat: str,
+        pace: str, input_mode: str, chat: str,
         words_state: dict[str, str],
         wait_callback: Callable[[Callable[[nextcord.Message], bool]], Awaitable[nextcord.Message]],
         lose_life: Callable[[str], Awaitable[None]],
 ) -> (bool, str, str, nextcord.User):
     await inter.channel.send(f"{team_to_string(current)}, your move!"
-                             f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
+                             f" You have {15 if pace == 'Speed' else 60} seconds to respond.")
 
     if words_state['prev_kata']:
         await announce_previous_word(inter, words_state['prev_kata'], words_state['prev_kanji'])
@@ -124,8 +125,12 @@ async def take_user_turn(
     logger.info(f"{response_msg.author.global_name} played {response}")
 
     if translationtools.is_romaji(response):
-        return await process_player_romaji(inter, response, response_msg.author, words_state, lose_life)
-    elif translationtools.is_kana(response):
+        if input_mode == "romaji":
+            return await process_player_romaji(inter, response, response_msg.author, words_state, lose_life)
+        else:
+            await inter.channel.send(f"You can't use romaji in this mode!")
+            return True, "", "", None
+    elif translationtools.is_kana(response) and input_mode != "kanji":
         return await process_player_kana(inter, response, response_msg.author, words_state, lose_life)
     else:
         return await process_player_kanji(inter, response, response_msg.author, words_state, lose_life)
@@ -211,8 +216,12 @@ async def process_player_kanji(
         await lose_life(f"{response} is not a valid word.")
         return True, "", "", None
 
-    readings = [w['reading'] for _, word in words.items() for w in word if w['word'] == response and
-                not get_invalid_reasons(w['reading'], words_state)]
+    readings = [w['reading']
+                for _, word in words.items()
+                for w in word if
+                (w['word'] == response if w['word'] else w['reading'] == response)
+                and not get_invalid_reasons(w['reading'], words_state)]
+
     if not readings:
         await lose_life(f"{response} is not a valid word.")
         return True, "", "", None
