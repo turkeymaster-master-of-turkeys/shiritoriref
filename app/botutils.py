@@ -46,6 +46,14 @@ async def take_bot_turn(
         inter: nextcord.Interaction,
         words_state: dict,
 ) -> (str, str):
+    """
+    Take a turn for the bot. The bot will try to play a word that starts with the last kana of the previous word. If no
+    such word exists, the bot will announce their loss.
+
+    :param inter: The interaction object
+    :param words_state: The state of the game
+    :return: The kana and kanji of the word to play
+    """
     prev_kata = translationtools.normalise_katakana(words_state['prev_kata']) or "ア"
     played_words = words_state['played_words']
 
@@ -61,7 +69,7 @@ async def take_bot_turn(
         hira = hira_candidates[random.randint(0, len(hira_candidates) - 1)]
         kata = translationtools.hiragana_to_katakana(hira)
         await inter.channel.send(translationtools.meaning_to_string(words_hira[hira]))
-        return hira, kata
+        return kata, words_hira[hira][0]['word'] or words_hira[hira][0]['reading']
 
     words_kata = await translationtools.get_words_starting_with(prev_kata)
     kata_candidates = [k for k in words_kata.keys() if k not in played_words and k[-1] != 'ン']
@@ -71,7 +79,7 @@ async def take_bot_turn(
     if kata_candidates:
         kata = kata_candidates[random.randint(0, len(kata_candidates) - 1)]
         await inter.channel.send(translationtools.meaning_to_string(words_kata[kata]))
-        return "", kata
+        return kata, kata
 
     await inter.channel.send("I have no words to play! You win!")
 
@@ -85,14 +93,12 @@ async def take_user_turn(
         words_state: dict[str, str],
         wait_callback: Callable[[Callable[[nextcord.Message], bool]], Awaitable[nextcord.Message]],
         lose_life: Callable[[str], Awaitable[None]],
-) -> (bool, str, nextcord.User):
-    prev_kata = words_state['prev_kata']
-
+) -> (bool, str, str, nextcord.User):
     await inter.channel.send(f"{team_to_string(current)}, your move!"
                              f" You have {15 if mode == 'Speed' else 60} seconds to respond.")
 
-    if prev_kata:
-        await announce_previous_word(inter, prev_kata)
+    if words_state['prev_kata']:
+        await announce_previous_word(inter, words_state['prev_kata'], words_state['prev_kanji'])
 
     try:
         def check(msg: nextcord.Message):
@@ -102,12 +108,12 @@ async def take_user_turn(
         response_msg = (await wait_callback(check))
     except asyncio.TimeoutError:
         await inter.channel.send(f"{team_to_string(current, mention=True)} took too long to respond. You lose!")
-        return False, "", None
+        return False, "", "", None
 
     response: str = response_msg.content[2 if response_msg.content.startswith("> ") else 0:].lower()
     if response == "> end":
         await inter.channel.send(f"{team_to_string(current)} has ended the game.")
-        return False, "", None
+        return False, "", "", None
 
     logger.info(f"{response_msg.author.global_name} played {response}")
 
@@ -125,13 +131,13 @@ async def process_player_romaji(
         author: nextcord.User,
         words_state: dict[str, str],
         lose_life: Callable[[str], Awaitable[None]],
-) -> (bool, str, int):
+) -> (bool, str, str, int):
     romaji = translationtools.remove_romaji_long_vowels(response)
     hira, kata = translationtools.romaji_to_hira_kata(translationtools.kana_to_romaji(response))
 
     if not kata:
         await inter.channel.send(f"{response} is not a valid romaji word.")
-        return True, "", None
+        return True, "", "", None
 
     async def invalid_word(r: str):
         await lose_life(f"{', '.join(hira if hira else kata) or response} {r}")
@@ -140,7 +146,7 @@ async def process_player_romaji(
     reasons = [get_invalid_reasons(k, words_state) for k, _ in zip(kata, hira)]
     invalid = [reason for reason in reasons if reason]
     if invalid:
-        return await invalid_word(invalid[0]), "", None
+        return await invalid_word(invalid[0]), "", "", None
 
     words_romaji = {translationtools.kana_to_romaji(k): v
                     for k, v in (await translationtools.search_jisho(romaji)).items()}
@@ -151,13 +157,13 @@ async def process_player_romaji(
     normalised = translationtools.kana_to_romaji(kata[0])
 
     if normalised not in words_romaji and response not in words_romaji:
-        return await invalid_word(f"is not a valid word."), "", None
+        return await invalid_word(f"is not a valid word."), "", "", None
 
     matches = words_romaji.get(normalised) or words_romaji.get(response)
     await inter.channel.send(translationtools.meaning_to_string(matches))
     reading = matches[0]['reading']
 
-    return True, translationtools.hiragana_to_katakana(reading), author
+    return True, translationtools.hiragana_to_katakana(reading), matches[0]['word'] or matches[0]['reading'], author
 
 
 async def process_player_kana(
@@ -166,8 +172,8 @@ async def process_player_kana(
         author: nextcord.User,
         words_state: dict[str, str],
         lose_life: Callable[[str], Awaitable[None]],
-) -> (bool, str, int):
-    return False, "", None
+) -> (bool, str, str, int):
+    return False, "", "", None
 
 
 async def process_player_kanji(
@@ -176,19 +182,18 @@ async def process_player_kanji(
         author: nextcord.User,
         words_state: dict[str, str],
         lose_life: Callable[[str], Awaitable[None]],
-) -> (bool, str, int):
-    return False, "", None
+) -> (bool, str, str, int):
+    return False, "", "", None
 
 
-async def announce_previous_word(inter: nextcord.Interaction, prev_kata: str) -> None:
-    prev_hira = translationtools.katakana_to_hiragana(prev_kata)
+async def announce_previous_word(inter: nextcord.Interaction, prev_kata: str, prev_kanji: str) -> None:
     last_kata = translationtools.normalise_katakana(prev_kata)[-1] \
         if prev_kata[-1] not in "ャュョァィェォ" else prev_kata[-2:]
     last_hira = translationtools.katakana_to_hiragana(last_kata)
     romaji = translationtools.kana_to_romaji(prev_kata)
     last_romaji = translationtools.kana_to_romaji(last_kata)
     await inter.channel.send(
-        f"The word was: {prev_hira or prev_kata} ({romaji})\n"
+        f"The word was: {prev_kanji} ({romaji})\n"
         f"The letter to start is:"
         f" {last_hira or last_kata} ({last_romaji})")
 
