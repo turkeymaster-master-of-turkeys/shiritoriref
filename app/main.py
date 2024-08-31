@@ -75,7 +75,8 @@ async def duel(
         [user], lambda: initiate_duel(inter, [[user], [inter.user]], pace, input_mode, chat),
         "The duel request has timed out.")
     view.message = await inter.response.send_message(
-        f"{user.mention}, you have been challenged to a duel by {inter.user.mention}!", view=view)
+        f"{user.mention}, you have been challenged to a"
+        f" {pace} duel in {input_mode} by {inter.user.mention}!", view=view)
 
 
 @bot.slash_command(
@@ -148,7 +149,7 @@ async def battle(
         t, lambda: initiate_duel(inter, teams, pace, input_mode, chat),
         "The battle request has timed out.")
     view.message = await inter.response.send_message(
-        f"{inter.user.display_name} has requested a battle!\n" +
+        f"{inter.user.display_name} has requested a {pace} battle in {input_mode}!\n" +
         " vs ".join([botutils.team_to_string(team, mention=True) for team in teams]),
         view=view)
 
@@ -156,11 +157,7 @@ async def battle(
 async def initiate_duel(
         inter: nextcord.Interaction, teams: list[list[nextcord.User]], pace: str, input_mode: str, chat: str
 ):
-    if pace in ["normal", "speed"] and len(teams) > 1:
-        logger.info(f"{botutils.team_to_string(teams[0])} challenged {botutils.team_to_string(teams[1])}"
-                    f" to a duel in {pace} mode with chat {chat}.")
-
-    if bot.user not in teams[0]:
+    if bot.user not in [u for team in teams for u in team]:
         await inter.channel.send(f"{botutils.team_to_string(teams[0])},"
                                  f" as the challenged, you have the right of the first word.")
 
