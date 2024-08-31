@@ -199,7 +199,23 @@ async def process_player_kanji(
         words_state: dict[str, str],
         lose_life: Callable[[str], Awaitable[None]],
 ) -> (bool, str, str, int):
-    return False, "", "", None
+    words = await translationtools.search_jisho(response)
+
+    if not words:
+        await lose_life(f"{response} is not a valid word.")
+        return True, "", "", None
+
+    readings = [w['reading'] for _, word in words.items() for w in word if w['word'] == response and
+                not get_invalid_reasons(w['reading'], words_state)]
+    if not readings:
+        await lose_life(f"{response} is not a valid word.")
+        return True, "", "", None
+
+    reading = readings[0]
+    kata = translationtools.hiragana_to_katakana(reading)
+    await inter.channel.send(translationtools.meaning_to_string(words[reading]))
+
+    return True, kata, response, author
 
 
 async def announce_previous_word(inter: nextcord.Interaction, prev_kata: str, prev_kanji: str) -> None:
