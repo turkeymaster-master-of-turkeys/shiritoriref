@@ -1,12 +1,12 @@
-import asyncio
 import logging
 import os
 
 import nextcord
+from dotenv import load_dotenv
 from nextcord import SlashOption
 from nextcord.ext import commands
+
 import botutils
-from dotenv import load_dotenv
 from constants import *
 
 load_dotenv()
@@ -39,7 +39,8 @@ async def duel(
         pace: str = SlashOption(description="The pace of the duel. Normal - 60s, Speed - 15s. Default: normal",
                                 choices=[PACE_NORMAL, PACE_SPEED], required=False, default=PACE_NORMAL),
         input_mode: str = SlashOption(description="The lowest allowed level input mode of the duel. Default: romaji",
-                                      choices=["romaji", "kana", "kanji"], required=False, default="romaji"),
+                                      choices=[INPUT_ROMAJI, INPUT_KANA, INPUT_ROMAJI],
+                                      required=False, default=INPUT_ROMAJI),
         chat: str = SlashOption(description="Enable chatting during the duel."
                                             " Start words with \"> \" or \"、 \" to submit in chat mode. Default: on",
                                 choices=["on", "off"], required=False, default="on")
@@ -73,7 +74,8 @@ async def survive(
         pace: str = SlashOption(description="The pace of the game. Normal - 60s, Speed - 15s. Default: normal",
                                 choices=[PACE_NORMAL, PACE_SPEED], required=False, default=PACE_NORMAL),
         input_mode: str = SlashOption(description="The lowest allowed level input mode of the game. Default: romaji",
-                                      choices=["romaji", "kana", "kanji"], required=False, default="romaji"),
+                                      choices=[INPUT_ROMAJI, INPUT_KANA, INPUT_ROMAJI],
+                                      required=False, default=INPUT_ROMAJI),
         chat: str = SlashOption(description="Enable chatting during the game.", required=False)
 ):
     players = list(set(bot.parse_mentions(players) + [inter.user])) if players else [inter.user]
@@ -100,7 +102,8 @@ async def battle(
         pace: str = SlashOption(description="The pace of the battle. Normal - 60s, Speed - 15s. Default: normal",
                                 choices=[PACE_NORMAL, PACE_SPEED], required=False, default=PACE_NORMAL),
         input_mode: str = SlashOption(description="The lowest allowed level input mode of the battle. Default: romaji",
-                                      choices=["romaji", "kana", "kanji"], required=False, default="romaji"),
+                                      choices=[INPUT_ROMAJI, INPUT_KANA, INPUT_ROMAJI],
+                                      required=False, default=INPUT_ROMAJI),
         chat: str = SlashOption(description="Enable chatting during the duel."
                                             " Start words with \"> \" or \"、\" to submit in chat mode. Default: on",
                                 choices=["on", "off"], required=False, default="on")
