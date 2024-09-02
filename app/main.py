@@ -53,21 +53,6 @@ async def duel(
         await initiate_duel(inter, [[inter.user], [user]], pace, input_mode, chat)
         return
 
-    if user.bot:
-        await inter.response.send_message(
-            f"{user.mention}, you have been challenged to a duel by {inter.user.mention}!"
-        )
-        try:
-            await bot.wait_for(
-                'message',
-                check=lambda m: m.author == user and m.content.lower() == "I accept this duel".lower(),
-                timeout=TIME_NORMAL
-            )
-            await initiate_duel(inter, [[user], [inter.user]], pace, input_mode, chat)
-        except asyncio.TimeoutError:
-            await inter.response.edit_message(f"{user.mention} has declined the duel.")
-        return
-
     view = botutils.DuelView(
         [user], lambda: initiate_duel(inter, [[user], [inter.user]], pace, input_mode, chat),
         "The duel request has timed out.")

@@ -10,6 +10,14 @@ import translationtools
 from constants import *
 
 logger = logging.getLogger("shiritori-ref")
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    filename='app.log',
+    filemode='a'
+)
+logger.addHandler(logging.StreamHandler())
 
 
 class DuelView(nextcord.ui.View):
@@ -25,18 +33,18 @@ class DuelView(nextcord.ui.View):
         self.edit_message = edit_message
 
     @nextcord.ui.button(label="Accept", style=ButtonStyle.green)
-    async def accept_callback(self, interaction: nextcord.Interaction):
+    async def accept_callback(self, button: nextcord.Button, interaction: nextcord.Interaction):
         if interaction.user not in self.team:
             await interaction.response.send_message("You cannot accept a duel for someone else!", ephemeral=True)
             return
         await interaction.response.edit_message(
             content=f"{team_to_string(self.team)} {'have' if len(self.team) > 1 else 'has'}  accepted the duel!",
             view=None)
-        self.stop()
         await self.callback()
+        self.stop()
 
     @nextcord.ui.button(label="Decline", style=ButtonStyle.red)
-    async def decline_callback(self, interaction: nextcord.Interaction):
+    async def decline_callback(self, button: nextcord.Button, interaction: nextcord.Interaction):
         if interaction.user not in self.team:
             await interaction.response.send_message("You cannot decline a duel for someone else!", ephemeral=True)
             return
