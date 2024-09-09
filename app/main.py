@@ -102,7 +102,7 @@ async def battle(
         pace: str = SlashOption(description="The pace of the battle. Normal - 60s, Speed - 15s. Default: normal",
                                 choices=[PACE_NORMAL, PACE_SPEED], required=False, default=PACE_NORMAL),
         input_mode: str = SlashOption(description="The lowest allowed level input mode of the battle. Default: romaji",
-                                      choices=[INPUT_ROMAJI, INPUT_KANA, INPUT_ROMAJI],
+                                      choices=[INPUT_ROMAJI, INPUT_KANA, INPUT_KANJI],
                                       required=False, default=INPUT_ROMAJI),
         chat: str = SlashOption(description="Enable chatting during the duel."
                                             " Start words with \"> \" or \"、\" to submit in chat mode. Default: on",
