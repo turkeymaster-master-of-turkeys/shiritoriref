@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import random
+import re
 from typing import Callable, Awaitable
 
 import nextcord.ui
@@ -127,7 +128,7 @@ async def take_user_turn(
         await inter.channel.send(f"{team_to_string(current, mention=True)} took too long to respond. You lose!")
         return False, "", "", None
 
-    response: str = response_msg.content[2 if response_msg.content[0:2] in MESSAGE_BEGIN else 0:].lower()
+    response: str = re.sub("^" + "|".join([f"({b})" for b in MESSAGE_BEGIN]), "", response_msg.content)
     if response == END_DUEL:
         await inter.channel.send(f"{team_to_string(current)} has ended the game.")
         return False, "", "", None
