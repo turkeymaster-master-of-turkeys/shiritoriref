@@ -8,6 +8,7 @@ import nextcord.ui
 from nextcord import ButtonStyle
 
 import kana_conversion
+from app.game_options import GameOptions, Pace, InputMode
 from app.game_state import GameState
 from app.team import Team
 from constants import *
@@ -107,7 +108,7 @@ async def take_bot_turn(
 
 async def take_user_turn(
         inter: nextcord.Interaction,
-        pace: str, input_mode: str, chat: str,
+        options: GameOptions,
         game_state: GameState,
         wait_callback: Callable[[Callable[[nextcord.Message], bool]], Awaitable[nextcord.Message]],
 ) -> (bool, str, str, nextcord.User):
@@ -116,16 +117,14 @@ async def take_user_turn(
     the word is valid, otherwise the meaning of the word will be displayed.
 
     :param inter: Interaction object
-    :param pace: Pace of the game (normal or fast)
-    :param input_mode: Mode of input (romaji, kana, kanji)
-    :param chat: Whether chat is enabled
+    :param options: Game options
     :param game_state: State of the game
     :param wait_callback: Function to wait for a message
     :return: A tuple containing whether the team should continue, the katakana of the word played, the kanji of the word
     played, and the player who played the word
     """
     await inter.channel.send(f"{game_state.current_team.to_string()}, your move!"
-                             f" You have {TIME_SPEED if pace == PACE_SPEED else TIME_NORMAL} seconds to respond.")
+                             f" You have {TIME_SPEED if options.pace == Pace.SPEED else TIME_NORMAL} seconds to respond.")
 
     if game_state.prev_kata:
         await announce_previous_word(inter, game_state.prev_kata, game_state.prev_kanji)
@@ -134,7 +133,7 @@ async def take_user_turn(
         def check(msg: nextcord.Message):
             logger.info(msg.content[0:2])
             return (msg.channel == inter.channel and msg.author in game_state.current_team and
-                    (chat == "off" or msg.content[0:2] in MESSAGE_BEGIN))
+                    (not options.chat_on or msg.content[0:2] in MESSAGE_BEGIN))
 
         response_msg = (await wait_callback(check))
     except asyncio.TimeoutError:
@@ -151,13 +150,13 @@ async def take_user_turn(
     logger.info(f"{response_msg.author.global_name} played {response}")
 
     if kana_conversion.is_romaji(response):
-        if input_mode == INPUT_ROMAJI:
+        if options.input_mode == InputMode.ROMAJI:
             (played_kata, played_kanji) = await process_player_romaji(inter, response, game_state)
             return True, played_kata, played_kanji, response_msg.author
         else:
             await inter.channel.send(f"You can't use romaji in this mode!")
             return True, "", "", None
-    elif kana_conversion.is_kana(response) and input_mode != INPUT_KANJI:
+    elif kana_conversion.is_kana(response) and options.input_mode != InputMode.KANJI:
         (played_kata, played_kanji) = await process_player_kana(inter, response, game_state)
         return True, played_kata, played_kanji, response_msg.author
     else:
