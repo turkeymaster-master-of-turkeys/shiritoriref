@@ -14,14 +14,6 @@ from app.team import Team
 from constants import *
 
 logger = logging.getLogger("shiritori-ref")
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    filename='app.log',
-    filemode='a'
-)
-logger.addHandler(logging.StreamHandler())
 
 
 class DuelView(nextcord.ui.View):
@@ -110,7 +102,7 @@ async def take_user_turn(
         inter: nextcord.Interaction,
         options: GameOptions,
         game_state: GameState,
-        wait_callback: Callable[[Callable[[nextcord.Message], bool]], Awaitable[nextcord.Message]],
+        wait_for_user_input: Callable[[Callable[[nextcord.Message], bool]], Awaitable[nextcord.Message]],
 ) -> (bool, str, str, nextcord.User):
     """
     Take a turn for a team. They will be prompted to play a word that starts with the last kana of the previous word. If
@@ -119,7 +111,7 @@ async def take_user_turn(
     :param inter: Interaction object
     :param options: Game options
     :param game_state: State of the game
-    :param wait_callback: Function to wait for a message
+    :param wait_for_user_input: Function to wait for a message
     :return: A tuple containing whether the team should continue, the katakana of the word played, the kanji of the word
     played, and the player who played the word
     """
@@ -136,7 +128,7 @@ async def take_user_turn(
             return (msg.channel == inter.channel and msg.author in game_state.current_team and
                     (not options.chat_on or msg.content[0:2] in MESSAGE_BEGIN))
 
-        response_msg = (await wait_callback(check))
+        response_msg = (await wait_for_user_input(check))
     except asyncio.TimeoutError:
         await inter.channel.send(
             f"{game_state.current_team.to_string(mention=True)} took too long to respond. You lose!")

@@ -38,20 +38,22 @@ async def on_ready():
 async def duel(
         inter: nextcord.Interaction,
         user: nextcord.User = SlashOption(description="The person you want to duel", required=True),
-        pace: str = SlashOption(description="The pace of the duel. Normal - 60s, Speed - 15s. Default: normal",
+        pace: str = SlashOption(description=f"The pace of the duel. Normal - 60s, Speed - 15s. Default: {Pace.NORMAL}",
                                 choices=Pace.choices(), required=False, default=Pace.NORMAL),
-        input_mode: str = SlashOption(description="The lowest allowed level input mode of the duel. Default: romaji",
+        input_mode: str = SlashOption(description="The lowest allowed level input mode of the duel. "
+                                                  f"Default: {InputMode.ROMAJI}",
                                       choices=InputMode.choices(),
                                       required=False, default=InputMode.ROMAJI),
-        chat: str = SlashOption(description="Enable chatting during the duel."
-                                            " Start words with \"> \" or \"、 \" to submit in chat mode. Default: on",
-                                choices=["on", "off"], required=False, default="on")
+        chat_on: bool = SlashOption(description="Enable chatting during the duel. "
+                                                f"Start words with \"{'\" or \"'.join(MESSAGE_BEGIN)}\" "
+                                                "to submit in chat mode. Default: true",
+                                    required=False, default=True)
 ) -> None:
     if user == inter.user:
         await inter.response.send_message("You cannot duel yourself!", ephemeral=True)
         return
 
-    options = GameOptions(Pace(pace), InputMode(input_mode), chat == "on")
+    options = GameOptions(Pace(pace), InputMode(input_mode), chat_on)
 
     if user == bot.user:
         await inter.response.send_message("Lets practice Shiritori!")
@@ -75,15 +77,18 @@ async def survive(
         inter: nextcord.Interaction,
         players: str = SlashOption(description="The players in the game", required=False),
         vs_ref: bool = SlashOption(description="Play against the bot. default: true", required=False, default=True),
-        pace: str = SlashOption(description="The pace of the game. Normal - 60s, Speed - 15s. Default: normal",
+        pace: str = SlashOption(description=f"The pace of the game. Normal - 60s, Speed - 15s. Default: {Pace.NORMAL}",
                                 choices=Pace.choices(), required=False, default=Pace.NORMAL),
-        input_mode: str = SlashOption(description="The lowest allowed level input mode of the game. Default: romaji",
+        input_mode: str = SlashOption(description="The lowest allowed level input mode of the game. "
+                                                  f"Default: {InputMode.ROMAJI}",
                                       choices=InputMode.choices(),
                                       required=False, default=InputMode.ROMAJI),
-        chat: str = SlashOption(description="Enable chatting during the game.", required=False)
+        chat_on: bool = SlashOption(description="Enable chatting during the game. "
+                                                f"Start words with \"{'\" or \"'.join(MESSAGE_BEGIN)}\"",
+                                    required=False, default=True)
 ) -> None:
     players = Team(list(set(bot.parse_mentions(players) + [inter.user])) if players else [inter.user])
-    options = GameOptions(Pace(pace), InputMode(input_mode), chat == "on")
+    options = GameOptions(Pace(pace), InputMode(input_mode), chat_on)
     if vs_ref:
         await inter.response.send_message("Let's practice shiritori!")
         await initiate_duel(inter, [players, Team([bot.user])], options)
@@ -104,14 +109,17 @@ async def battle(
         team3: str = SlashOption(description="The third team", required=False),
         team4: str = SlashOption(description="The fourth team", required=False),
         team5: str = SlashOption(description="The fifth team", required=False),
-        pace: str = SlashOption(description="The pace of the battle. Normal - 60s, Speed - 15s. Default: normal",
+        pace: str = SlashOption(description=f"The pace of the battle. Normal - 60s, Speed - 15s. "
+                                            f"Default: {Pace.NORMAL}",
                                 choices=Pace.choices(), required=False, default=Pace.NORMAL),
-        input_mode: str = SlashOption(description="The lowest allowed level input mode of the battle. Default: romaji",
+        input_mode: str = SlashOption(description="The lowest allowed level input mode of the battle. "
+                                                  f"Default: {InputMode.ROMAJI}",
                                       choices=InputMode.choices(),
                                       required=False, default=InputMode.ROMAJI),
-        chat: str = SlashOption(description="Enable chatting during the duel."
-                                            " Start words with \"> \" or \"、\" to submit in chat mode. Default: on",
-                                choices=["on", "off"], required=False, default="on")
+        chat_on: bool = SlashOption(description="Enable chatting during the duel. "
+                                                f"Start words with \"{'\" or \"'.join(MESSAGE_BEGIN)}\" "
+                                                "to submit in chat mode. Default: on",
+                                    required=False, default=True)
 ) -> None:
     team_1 = list(set(bot.parse_mentions(team1)))
     team_2 = list(set(bot.parse_mentions(team2)))
@@ -130,7 +138,7 @@ async def battle(
         return
     all_players.pop(all_players.index(inter.user))
 
-    options = GameOptions(Pace(pace), InputMode(input_mode), chat == "on")
+    options = GameOptions(Pace(pace), InputMode(input_mode), chat_on)
 
     if bot.user in all_players:
         await inter.response.send_message("Lets practice Shiritori!")
@@ -162,7 +170,7 @@ async def initiate_duel(
                                  f" as the challenged, you have the right of the first word.")
     game_state = GameState(teams)
 
-    async def wait_callback(check):
+    async def wait_for_user_input(check) -> nextcord.Message:
         return await bot.wait_for(
             'message', timeout=TIME_SPEED if options.pace == Pace.SPEED else TIME_NORMAL, check=check)
 
@@ -172,8 +180,9 @@ async def initiate_duel(
         current_id = game_state.current_team.id
 
         if game_state.lives[current_id] <= 0:
-            await inter.channel.send(f"{game_state.current_team.to_string()} {'have' if len(game_state.current_team) > 1 else 'has'}"
-                                     f" lost all their lives. ")
+            await inter.channel.send(
+                f"{game_state.current_team.to_string()} {'have' if len(game_state.current_team) > 1 else 'has'}"
+                f" lost all their lives. ")
             finished = game_state.knockout_team()
             if finished:
                 await inter.channel.send(f"{game_state.current_team.to_string(mention=True)} has won!")
@@ -197,7 +206,7 @@ async def initiate_duel(
 
         # User's turn
         (is_alive, played_kata, played_kanji, player) = await game_turns.take_user_turn(
-            inter, options, game_state, wait_callback
+            inter, options, game_state, wait_for_user_input
         )
 
         if not is_alive:
