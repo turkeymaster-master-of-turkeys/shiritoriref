@@ -24,3 +24,6 @@ class Team:
 
     def __len__(self):
         return len(self.players)
+
+    def __contains__(self, item):
+        return item in self.players
