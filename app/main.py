@@ -167,8 +167,8 @@ async def initiate_duel(
             'message', timeout=TIME_SPEED if options.pace == Pace.SPEED else TIME_NORMAL, check=check)
 
     while True:
-        streak = len(game_state.played_words)
-        logger.info(f"Streak {streak}, Lives: {game_state.lives}, Words played: {game_state.num_words_played}")
+        logger.info(
+            f"Streak {game_state.get_streak()}, Lives: {game_state.lives}, Words played: {game_state.num_words_played}")
         current_id = game_state.current_team.id
 
         if game_state.lives[current_id] <= 0:
@@ -193,7 +193,7 @@ async def initiate_duel(
             else:
                 break
 
-        await game_turns.announce_streak(inter, streak)
+        await game_state.announce_streak(inter)
 
         # User's turn
         (is_alive, played_kata, played_kanji, player) = await game_turns.take_user_turn(
@@ -217,7 +217,7 @@ async def initiate_duel(
 
     # The game has ended
     await inter.channel.send(
-        f"The final streak was {streak}!\n" +
+        f"The final streak was {game_state.get_streak()}!\n" +
         "\n".join([f"{user.global_name or user.display_name} played {num} words"
                    for user, num in game_state.num_words_played.items()]))
 

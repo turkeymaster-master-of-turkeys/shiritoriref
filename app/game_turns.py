@@ -124,10 +124,11 @@ async def take_user_turn(
     played, and the player who played the word
     """
     await inter.channel.send(f"{game_state.current_team.to_string()}, your move!"
-                             f" You have {TIME_SPEED if options.pace == Pace.SPEED else TIME_NORMAL} seconds to respond.")
+                             f" You have {TIME_SPEED if options.pace == Pace.SPEED else TIME_NORMAL}"
+                             f" seconds to respond.")
 
     if game_state.prev_kata:
-        await announce_previous_word(inter, game_state.prev_kata, game_state.prev_kanji)
+        await game_state.announce_previous_word(inter)
 
     try:
         def check(msg: nextcord.Message):
@@ -188,7 +189,7 @@ async def process_player_romaji(
     async def invalid_word(r: str):
         await game_state.lose_life(f"{', '.join(hira if hira else kata) or response} {r}", inter)
 
-    reasons = [get_invalid_reasons(k, game_state) for k, _ in zip(kata, hira)]
+    reasons = [game_state.get_invalid_reasons(k) for k, _ in zip(kata, hira)]
     invalid = [reason for reason in reasons if reason]
     if invalid:
         await invalid_word(invalid[0])
@@ -233,7 +234,7 @@ async def process_player_kana(
         await game_state.lose_life(f"{response} is not a valid word.", inter)
         return "", ""
 
-    invalid = get_invalid_reasons(response, game_state)
+    invalid = game_state.get_invalid_reasons(response)
     if invalid:
         await game_state.lose_life(f"{response} {invalid}", inter)
         return "", ""
@@ -270,7 +271,7 @@ async def process_player_kanji(
                 for _, word in words.items()
                 for w in word if
                 (w['word'] == response if w['word'] else w['reading'] == response)
-                and not get_invalid_reasons(w['reading'], game_state)]
+                and not game_state.get_invalid_reasons(w['reading'])]
 
     if not readings:
         await game_state.lose_life(f"{response} is not a valid word.", inter)
@@ -281,76 +282,3 @@ async def process_player_kanji(
     await inter.channel.send(kana_conversion.meaning_to_string(words[reading]))
 
     return kata, response
-
-
-async def announce_previous_word(inter: nextcord.Interaction, prev_kata: str, prev_kanji: str) -> None:
-    """
-    Announce the previous word played in the game.
-
-    :param inter: Interaction object
-    :param prev_kata: Katakana of the previous word
-    :param prev_kanji: Kanji of the previous word
-    :return:
-    """
-    last_kata = kana_conversion.normalise_katakana(prev_kata)[-1] \
-        if prev_kata[-1] not in "ャュョァィェォ" else prev_kata[-2:]
-    last_hira = kana_conversion.katakana_to_hiragana(last_kata)
-    romaji = kana_conversion.kana_to_romaji(prev_kata)
-    last_romaji = kana_conversion.kana_to_romaji(last_kata)
-    await inter.channel.send(
-        f"The word was: {prev_kanji} ({romaji})\n"
-        f"The letter to start is:"
-        f" {last_hira or last_kata} ({last_romaji})")
-
-
-def get_invalid_reasons(
-        kata: str, game_state: GameState
-) -> str:
-    """
-    Check if a word is invalid for the game_state.current_team game state. The word will be checked for the following conditions:
-    - If the word is empty
-    - If the word is only one mora
-    - If the word has already been played
-    - If the word does not match the previous word
-    - If the word ends with ん
-
-    :param kata: Katakana of the word to check
-    :param game_state: State of the game
-    :return: String containing the reason the word is invalid, or an empty string if the word is valid
-    """
-    prev_kata = game_state.prev_kata
-    if not prev_kata:
-        return ""
-    elif not kata:
-        return "is not a valid Romaji word!"
-    elif kata in kana_conversion.set_mora:
-        return "is only one mora!"
-    elif kata in game_state.played_words:
-        return "has already been played!"
-    elif not kana_conversion.match_kana(prev_kata, kana_conversion.hiragana_to_katakana(kata)):
-        return "does not match the previous word!"
-    elif kata[-1] == 'ン':
-        return "ends with ん!"
-    return ""
-
-
-async def announce_streak(inter: nextcord.Interaction, streak: int) -> None:
-    """
-    Announce the game_state.current_team streak of the game.
-
-    :param inter: Interaction object
-    :param streak: Streak of the game
-    :return:
-    """
-    if streak != 0 and streak % 5 == 0:
-        if streak % 100 == 0:
-            await inter.channel.send(f"The streak is {streak}!")
-            await inter.channel.send(f"https://tenor.com/view/orangutan-driving-gif-24461244")
-        if streak % 50 == 0:
-            await inter.channel.send(f"The streak is {streak}! :orangutan::orangutan::orangutan:")
-        if streak % 25 == 0:
-            await inter.channel.send(f"The streak is {streak}! :fire::fire::fire:")
-        elif streak % 10 == 0:
-            await inter.channel.send(f"The streak is {streak}! :fire:")
-        else:
-            await inter.channel.send(f"The streak is {streak}!")
