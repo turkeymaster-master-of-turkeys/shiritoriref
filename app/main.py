@@ -7,9 +7,9 @@ from nextcord import SlashOption
 from nextcord.ext import commands
 
 import game_turns
-from app.game_options import *
-from app.game_state import GameState
-from app.team import Team
+from game_options import *
+from game_state import GameState
+from team import Team
 from constants import *
 
 load_dotenv()

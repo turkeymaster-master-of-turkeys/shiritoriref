@@ -1,7 +1,7 @@
 import nextcord
 
-from app import kana_conversion
-from app.team import Team
+import kana_conversion
+from team import Team
 
 
 class GameState:

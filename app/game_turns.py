@@ -8,9 +8,9 @@ import nextcord.ui
 from nextcord import ButtonStyle
 
 import kana_conversion
-from app.game_options import GameOptions, Pace, InputMode
-from app.game_state import GameState
-from app.team import Team
+from game_options import GameOptions, Pace, InputMode
+from game_state import GameState
+from team import Team
 from constants import *
 
 logger = logging.getLogger("shiritori-ref")
