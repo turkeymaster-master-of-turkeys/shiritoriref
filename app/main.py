@@ -13,7 +13,6 @@ load_dotenv()
 
 intents = nextcord.Intents.all()
 bot = commands.Bot(intents=intents)
-guilds = [643165990695206920, 931645765980393624]
 
 logger = logging.getLogger("shiritori-ref")
 logging.basicConfig(
@@ -31,7 +30,7 @@ async def on_ready():
 @bot.slash_command(
     name="duel",
     description="Challenge someone to a duel",
-    guild_ids=guilds,
+    guild_ids=GUILDS,
 )
 async def duel(
         inter: nextcord.Interaction,
@@ -44,7 +43,7 @@ async def duel(
         chat: str = SlashOption(description="Enable chatting during the duel."
                                             " Start words with \"> \" or \"、 \" to submit in chat mode. Default: on",
                                 choices=["on", "off"], required=False, default="on")
-):
+) -> None:
     if user == inter.user:
         await inter.response.send_message("You cannot duel yourself!", ephemeral=True)
         return
@@ -65,7 +64,7 @@ async def duel(
 @bot.slash_command(
     name="survive",
     description="Start a survival mode game",
-    guild_ids=guilds
+    guild_ids=GUILDS
 )
 async def survive(
         inter: nextcord.Interaction,
@@ -77,7 +76,7 @@ async def survive(
                                       choices=[INPUT_ROMAJI, INPUT_KANA, INPUT_KANJI],
                                       required=False, default=INPUT_ROMAJI),
         chat: str = SlashOption(description="Enable chatting during the game.", required=False)
-):
+) -> None:
     players = list(set(bot.parse_mentions(players) + [inter.user])) if players else [inter.user]
     if vs_ref:
         await inter.response.send_message("Let's practice shiritori!")
@@ -90,7 +89,7 @@ async def survive(
 @bot.slash_command(
     name="battle",
     description="Challenge a team to a duel",
-    guild_ids=guilds,
+    guild_ids=GUILDS,
 )
 async def battle(
         inter: nextcord.Interaction,
@@ -107,7 +106,7 @@ async def battle(
         chat: str = SlashOption(description="Enable chatting during the duel."
                                             " Start words with \"> \" or \"、\" to submit in chat mode. Default: on",
                                 choices=["on", "off"], required=False, default="on")
-):
+) -> None:
     team_1 = list(set(bot.parse_mentions(team1)))
     team_2 = list(set(bot.parse_mentions(team2)))
     team_3 = list(set(bot.parse_mentions(team3))) if team3 else []
@@ -141,7 +140,17 @@ async def battle(
 
 async def initiate_duel(
         inter: nextcord.Interaction, teams: list[list[nextcord.User]], pace: str, input_mode: str, chat: str
-):
+) -> None:
+    """
+    Initiates a duel or battle.
+
+    :param inter: Interaction object
+    :param teams: List of teams. A team is a list of users.
+    :param pace: Pace of the game
+    :param input_mode: Input mode
+    :param chat: "on" or "off"
+    :return:
+    """
     if bot.user not in [u for team in teams for u in team]:
         await inter.channel.send(f"{botutils.team_to_string(teams[0])},"
                                  f" as the challenged, you have the right of the first word.")
@@ -182,6 +191,7 @@ async def initiate_duel(
             if not current:
                 break
 
+        # Bot's turn
         if bot.user in current:
             (played_kata, played_kanji) = await botutils.take_bot_turn(inter, words_state)
             logger.info(f"Bot played {played_kata}")
@@ -199,6 +209,7 @@ async def initiate_duel(
 
         await botutils.announce_streak(inter, streak)
 
+        # User's turn
         (cont, played_kata, played_kanji, player) = await botutils.take_user_turn(
             inter, current, pace, input_mode, chat, words_state, wait_callback, lose_life
         )
@@ -219,6 +230,7 @@ async def initiate_duel(
         current = teams[(teams.index(current) + 1) % len(teams)]
         num_words_played[player] += 1
 
+    # The game has ended
     await inter.channel.send(
         f"The final streak was {streak}!\n" +
         "\n".join([f"{user.global_name or user.display_name} played {num} words"

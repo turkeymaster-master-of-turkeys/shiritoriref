@@ -4,11 +4,18 @@ from jisho_api.word import Word
 logger = logging.getLogger("shiritori-ref")
 
 
-def match_kana(prev: str, curr: str) -> bool:
-    if not prev or not curr:
+def match_kana(previous: str, current: str) -> bool:
+    """
+    Checks if the previous word matches the current word
+
+    :param previous: Previous word
+    :param current: Current word
+    :return:
+    """
+    if not previous or not current:
         return False
-    p = normalise_katakana(prev)
-    c = normalise_katakana(curr)
+    p = normalise_katakana(previous)
+    c = normalise_katakana(current)
     logger.info(f"Matching {p} with {c}")
     for i in range(min(len(p), len(c))):
         if p[len(p) - 1 - i:] == c[:i + 1]:
@@ -17,6 +24,12 @@ def match_kana(prev: str, curr: str) -> bool:
 
 
 def normalise_katakana(katakana: str) -> str:
+    """
+    Normalises katakana by converting choonpu to the correct kana, normalising rare/ interchangable kana and small kana
+
+    :param katakana: Katakana to normalise
+    :return: Normalised katakana
+    """
     def choonpu_to_kana(kana: str) -> str:
         return kana in set_a and 'ア' or \
             kana in set_e and 'イ' or \
@@ -39,8 +52,10 @@ def normalise_katakana(katakana: str) -> str:
 async def search_jisho(term: str) -> dict:
     """
     Searches the Jisho API for a term
+
     :param term: Search term
-    :return: Dictionary of words
+    :return: A dictionary with keys as readings and values a dictionary with keys: word, meanings, reading which are the
+    word, meanings and reading of the word respectively.
     """
     wr = Word.request(term)
     if not wr:
@@ -64,6 +79,12 @@ async def search_jisho(term: str) -> dict:
 
 
 async def get_words_starting_with(word: str) -> dict:
+    """
+    Uses the Jisho API to get words starting with the last kana of the word.
+
+    :param word:
+    :return:
+    """
     start = word[-2:] if word[-1] in "ゃゅょャュョァィェォ" else word[-1]
     words = await search_jisho(f"{start}*")
     return {k: v for k, v in words.items() if k.startswith(start)}
@@ -99,11 +120,11 @@ def remove_romaji_long_vowels(romaji: str) -> str:
             .replace('ou', 'o').replace('ei', 'e'))
 
 
-def romaji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str:
+def romaji_to_kana(word: str, dictionary: dict[str, str], small_tsu: str) -> str:
     """
     Converts a string to a list of possible kana, using a specified dictionary
 
-    :param tsu: Small tsu to use
+    :param small_tsu: Small tsu to use
     :param dictionary: The dictionary to use
     :param word: The word to convert
     :return: All possible kana parsings of the word with the dictionary
@@ -117,7 +138,7 @@ def romaji_to_kana(word: str, dictionary: dict[str, str], tsu: str) -> str:
             break
     while i < len(word):
         if i + 1 < len(word) and word[i] == word[i + 1] and word[i] != 'n':
-            kana_word += tsu  # Small tsu
+            kana_word += small_tsu
             i += 1
         for j in range(min(3, len(word) - i), 0, -1):
             if word[i:i + j] in dictionary:
@@ -135,7 +156,6 @@ def romaji_to_katakana(word: str) -> tuple[list[str], list[str]]:
     :param word: The word to convert
     :return: All possible katakana parsings of the word
     """
-
     kata = romaji_to_kana(word, romaji_to_katakana_dict, 'ッ')
     if not kata:
         return [], []
@@ -174,6 +194,7 @@ def romaji_to_katakana(word: str) -> tuple[list[str], list[str]]:
 def romaji_to_hira_kata(word: str) -> tuple[list[str], list[str]]:
     """
     Converts a string to a list of possible hiragana and katakana
+
     :param word: The word to convert
     :return: All possible hiragana and katakana parsings of the word
     """
@@ -184,18 +205,27 @@ def romaji_to_hira_kata(word: str) -> tuple[list[str], list[str]]:
 
 
 def kana_to_romaji(kana: str) -> str:
+    """
+    Converts a kana string to romaji
+
+    :param kana: Kana string
+    :return: Romaji string
+    """
     dictionary = {**hiragana_to_romaji_dict, **katakana_to_romaji_dict}
     romaji = ""
     i = 0
     while True:
         if i >= len(kana):
             break
+        # Check for two character mora (i.e with small kana)
         if kana[i:i + 2] in dictionary:
             romaji += dictionary[kana[i:i + 2]]
             i += 2
+        # Check for regular kana
         elif kana[i] in dictionary:
             romaji += dictionary[kana[i]]
             i += 1
+        # Check for special cases
         elif kana[i] == 'ー':
             if i > 0 and kana[i - 1] in dictionary:
                 romaji += dictionary[kana[i - 1]][-1]
@@ -214,10 +244,22 @@ def kana_to_romaji(kana: str) -> str:
 
 
 def hiragana_to_katakana(hira: str) -> str:
+    """
+    Converts a hiragana string to katakana
+
+    :param hira: Hiragana string
+    :return: Katakana string
+    """
     return ''.join(hiragana_to_katakana_dict.get(c, c) for c in hira)
 
 
 def katakana_to_hiragana(kata: str) -> str:
+    """
+    Converts a katakana string to hiragana if possible, otherwise returns an empty string
+
+    :param kata: Katakana string
+    :return: Hiragana string if possible, otherwise an empty string
+    """
     hira = ""
     for c in kata:
         if c in katakana_to_hiragana_dict:
@@ -228,10 +270,22 @@ def katakana_to_hiragana(kata: str) -> str:
 
 
 def is_romaji(word: str) -> bool:
+    """
+    Checks if a word is romaji
+
+    :param word: String to check
+    :return: Whether the string is romaji
+    """
     return all(c in set_romaji for c in word)
 
 
 def is_kana(word: str) -> bool:
+    """
+    Checks if a word is all kana
+
+    :param word: String to check
+    :return: Whether the string is kana
+    """
     return all(c in set_hira.union(set_kata) for c in word)
 
 
