@@ -7,6 +7,7 @@ from nextcord import SlashOption
 from nextcord.ext import commands
 
 import game_turns
+from app.game_state import GameState
 from app.team import Team
 from constants import *
 
@@ -155,55 +156,34 @@ async def initiate_duel(
     if bot.user not in [u for team in teams for u in team.players]:
         await inter.channel.send(f"{teams[0].to_string()},"
                                  f" as the challenged, you have the right of the first word.")
-
-    current_team = teams[0]
-    words_state = {
-        "prev_kata": "",
-        "prev_kanji": "",
-        "played_words": set()
-    }
-    lives = {team.id: 3 for team in teams}
-    num_words_played = {user: 0 for team in teams for user in team.players}
+    game_state = GameState(teams)
 
     async def wait_callback(check):
         return await bot.wait_for('message', timeout=TIME_SPEED if pace == PACE_SPEED else TIME_NORMAL, check=check)
 
-    async def knockout_team(team: Team) -> Team or None:
-        index = teams.index(team)
-        teams.pop(index)
-        if len(teams) == 1:
-            await inter.channel.send(f"{teams[0].to_string(mention=True)} has won!")
-            return None
-        return teams[index % len(teams)]
-
     while True:
-        streak = len(words_state['played_words'])
-        logger.info(f"Streak {streak}, Lives: {lives}, Words played: {num_words_played}")
-        current_id = current_team[0].id
+        streak = len(game_state.played_words)
+        logger.info(f"Streak {streak}, Lives: {game_state.lives}, Words played: {game_state.num_words_played}")
+        current_id = game_state.current_team.id
 
-        async def lose_life(message: str) -> None:
-            lives[current_id] -= 1
-            await inter.channel.send(f"{message} You have {lives[current_id]} lives remaining.")
-
-        if lives[current_id] <= 0:
-            await inter.channel.send(f"{current_team.to_string()} {'have' if len(current_team) > 1 else 'has'}"
+        if game_state.lives[current_id] <= 0:
+            await inter.channel.send(f"{game_state.current_team.to_string()} {'have' if len(game_state.current_team) > 1 else 'has'}"
                                      f" lost all their lives. ")
-            current_team = await knockout_team(current_team)
-            if not current_team:
+            finished = game_state.knockout_team()
+            if finished:
+                await inter.channel.send(f"{game_state.current_team.to_string(mention=True)} has won!")
                 break
 
         # Bot's turn
-        if bot.user in current_team:
-            (played_kata, played_kanji) = await game_turns.take_bot_turn(inter, words_state)
+        if bot.user in game_state.current_team:
+            (played_kata, played_kanji) = await game_turns.take_bot_turn(inter, game_state)
             logger.info(f"Bot played {played_kata}")
             if played_kata:
-                words_state = {
-                    "prev_kata": played_kata,
-                    "prev_kanji": played_kanji,
-                    "played_words": words_state['played_words'].union({played_kata})
-                }
-                current_team = teams[(teams.index(current_team) + 1) % len(teams)]
-                num_words_played[bot.user] += 1
+                game_state.prev_kata = played_kata
+                game_state.prev_kanji = played_kanji
+                game_state.played_words.add(played_kata)
+                game_state.current_team = teams[(teams.index(game_state.current_team) + 1) % len(teams)]
+                game_state.num_words_played[bot.user] += 1
                 continue
             else:
                 break
@@ -211,31 +191,30 @@ async def initiate_duel(
         await game_turns.announce_streak(inter, streak)
 
         # User's turn
-        (cont, played_kata, played_kanji, player) = await game_turns.take_user_turn(
-            inter, current_team, pace, input_mode, chat, words_state, wait_callback, lose_life
+        (is_alive, played_kata, played_kanji, player) = await game_turns.take_user_turn(
+            inter, pace, input_mode, chat, game_state, wait_callback
         )
 
-        if not cont:
-            current_team = await knockout_team(current_team)
-            if not current_team:
+        if not is_alive:
+            finished = game_state.knockout_team()
+            if finished:
+                await inter.channel.send(f"{game_state.current_team.to_string(mention=True)} has won!")
                 break
             continue
         if not played_kata:
             continue
 
-        words_state = {
-            "prev_kata": played_kata,
-            "prev_kanji": played_kanji,
-            "played_words": words_state['played_words'].union({played_kata})
-        }
-        current_team = teams[(teams.index(current_team) + 1) % len(teams)]
-        num_words_played[player] += 1
+        game_state.prev_kata = played_kata
+        game_state.prev_kanji = played_kanji
+        game_state.played_words.add(played_kata)
+        game_state.current_team = teams[(teams.index(game_state.current_team) + 1) % len(teams)]
+        game_state.num_words_played[player] += 1
 
     # The game has ended
     await inter.channel.send(
         f"The final streak was {streak}!\n" +
         "\n".join([f"{user.global_name or user.display_name} played {num} words"
-                   for user, num in num_words_played.items()]))
+                   for user, num in game_state.num_words_played.items()]))
 
 
 if __name__ == '__main__':

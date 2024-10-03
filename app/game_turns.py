@@ -8,6 +8,7 @@ import nextcord.ui
 from nextcord import ButtonStyle
 
 import kana_conversion
+from app.game_state import GameState
 from app.team import Team
 from constants import *
 
@@ -62,18 +63,18 @@ class DuelView(nextcord.ui.View):
 
 async def take_bot_turn(
         inter: nextcord.Interaction,
-        words_state: dict,
+        game_state: GameState,
 ) -> (str, str):
     """
     Take a turn for the bot. The bot will try to play a word that starts with the last kana of the previous word. If no
     such word exists, the bot will announce their loss.
 
     :param inter: The interaction object
-    :param words_state: The state of the game
+    :param game_state: The state of the game
     :return: The kana and kanji of the word to play
     """
-    prev_kata = kana_conversion.normalise_katakana(words_state['prev_kata']) or "ア"
-    played_words = words_state['played_words']
+    prev_kata = kana_conversion.normalise_katakana(game_state.prev_kata) or "ア"
+    played_words = game_state.played_words
 
     await inter.channel.send(f"My turn!")
 
@@ -106,81 +107,76 @@ async def take_bot_turn(
 
 async def take_user_turn(
         inter: nextcord.Interaction,
-        current: Team,
         pace: str, input_mode: str, chat: str,
-        words_state: dict[str, str],
+        game_state: GameState,
         wait_callback: Callable[[Callable[[nextcord.Message], bool]], Awaitable[nextcord.Message]],
-        lose_life: Callable[[str], Awaitable[None]],
 ) -> (bool, str, str, nextcord.User):
     """
     Take a turn for a team. They will be prompted to play a word that starts with the last kana of the previous word. If
-    the word is invalid, lose_life will be called, otherwise the meaning of the word will be displayed.
+    the word is valid, otherwise the meaning of the word will be displayed.
 
     :param inter: Interaction object
-    :param current: Team that is currently playing
     :param pace: Pace of the game (normal or fast)
     :param input_mode: Mode of input (romaji, kana, kanji)
     :param chat: Whether chat is enabled
-    :param words_state: State of the game
+    :param game_state: State of the game
     :param wait_callback: Function to wait for a message
-    :param lose_life: Function to call when a team loses a life
     :return: A tuple containing whether the team should continue, the katakana of the word played, the kanji of the word
     played, and the player who played the word
     """
-    await inter.channel.send(f"{current.to_string()}, your move!"
+    await inter.channel.send(f"{game_state.current_team.to_string()}, your move!"
                              f" You have {TIME_SPEED if pace == PACE_SPEED else TIME_NORMAL} seconds to respond.")
 
-    if words_state['prev_kata']:
-        await announce_previous_word(inter, words_state['prev_kata'], words_state['prev_kanji'])
+    if game_state.prev_kata:
+        await announce_previous_word(inter, game_state.prev_kata, game_state.prev_kanji)
 
     try:
         def check(msg: nextcord.Message):
             logger.info(msg.content[0:2])
-            return (msg.channel == inter.channel and msg.author in current and
+            return (msg.channel == inter.channel and msg.author in game_state.current_team and
                     (chat == "off" or msg.content[0:2] in MESSAGE_BEGIN))
 
         response_msg = (await wait_callback(check))
     except asyncio.TimeoutError:
-        await inter.channel.send(f"{current.to_string(mention=True)} took too long to respond. You lose!")
+        await inter.channel.send(
+            f"{game_state.current_team.to_string(mention=True)} took too long to respond. You lose!")
         return False, "", "", None
 
     # Remove the message beginning indicator
     response: str = re.sub("^" + "|".join([f"({b})" for b in MESSAGE_BEGIN]), "", response_msg.content)
     if response == END_DUEL:
-        await inter.channel.send(f"{current.to_string()} has ended the game.")
+        await inter.channel.send(f"{game_state.current_team.to_string()} has ended the game.")
         return False, "", "", None
 
     logger.info(f"{response_msg.author.global_name} played {response}")
 
     if kana_conversion.is_romaji(response):
         if input_mode == INPUT_ROMAJI:
-            (played_kata, played_kanji) = await process_player_romaji(inter, response, words_state, lose_life)
+            (played_kata, played_kanji) = await process_player_romaji(inter, response, game_state)
             return True, played_kata, played_kanji, response_msg.author
         else:
             await inter.channel.send(f"You can't use romaji in this mode!")
             return True, "", "", None
     elif kana_conversion.is_kana(response) and input_mode != INPUT_KANJI:
-        (played_kata, played_kanji) = await process_player_kana(inter, response, words_state, lose_life)
+        (played_kata, played_kanji) = await process_player_kana(inter, response, game_state)
         return True, played_kata, played_kanji, response_msg.author
     else:
-        (played_kata, played_kanji) = await process_player_kanji(inter, response, words_state, lose_life)
+        (played_kata, played_kanji) = await process_player_kanji(inter, response, game_state)
         return True, played_kata, played_kanji, response_msg.author
 
 
 async def process_player_romaji(
         inter: nextcord.Interaction,
         response: str,
-        words_state: dict[str, str],
-        lose_life: Callable[[str], Awaitable[None]],
+        game_state: GameState,
 ) -> (str, str, int):
     """
     Process a player's response in romaji. The response will be checked for validity and the meaning of the word will be
-    displayed. If the word is invalid, the player will lose_life will be called.
+    displayed. If the word is invalid, the player's team will lose a life.
 
     :param inter: Interaction object
     :param response: The response of the player
-    :param words_state: State of the game
-    :param lose_life: Function to call when a player loses a life
+    :param game_state: State of the game
     :return: Pair containing the katakana and kanji of the word played if the word is valid, otherwise an empty string
     """
     romaji = kana_conversion.remove_romaji_long_vowels(response)
@@ -191,9 +187,9 @@ async def process_player_romaji(
         return "", ""
 
     async def invalid_word(r: str):
-        await lose_life(f"{', '.join(hira if hira else kata) or response} {r}")
+        await game_state.lose_life(f"{', '.join(hira if hira else kata) or response} {r}", inter)
 
-    reasons = [get_invalid_reasons(k, words_state) for k, _ in zip(kata, hira)]
+    reasons = [get_invalid_reasons(k, game_state) for k, _ in zip(kata, hira)]
     invalid = [reason for reason in reasons if reason]
     if invalid:
         await invalid_word(invalid[0])
@@ -221,29 +217,26 @@ async def process_player_romaji(
 async def process_player_kana(
         inter: nextcord.Interaction,
         response: str,
-        words_state: dict[str, str],
-        lose_life: Callable[[str], Awaitable[None]],
+        game_state: GameState,
 ) -> (str, str):
     """
     Process a player's response in kana. The response will be checked for validity and the meaning of the word will be
-    displayed. If the word is invalid, then lose_life will be called. If the word is valid, the katakana and kanji of
-    the word will be returned.
+    displayed. If the word is valid, the katakana and kanji of the word will be returned.
 
     :param inter: Interaction object
     :param response: The response of the player
-    :param words_state: State of the game
-    :param lose_life: Function to call when a player loses a life
+    :param game_state: State of the game
     :return: Pair containing the katakana and kanji of the word played if the word is valid, otherwise an empty string
     """
     words = await kana_conversion.search_jisho(response)
 
     if not words:
-        await lose_life(f"{response} is not a valid word.")
+        await game_state.lose_life(f"{response} is not a valid word.", inter)
         return "", ""
 
-    invalid = get_invalid_reasons(response, words_state)
+    invalid = get_invalid_reasons(response, game_state)
     if invalid:
-        await lose_life(f"{response} {invalid}")
+        await game_state.lose_life(f"{response} {invalid}", inter)
         return "", ""
 
     await inter.channel.send(kana_conversion.meaning_to_string(words[response]))
@@ -257,34 +250,31 @@ async def process_player_kana(
 async def process_player_kanji(
         inter: nextcord.Interaction,
         response: str,
-        words_state: dict[str, str],
-        lose_life: Callable[[str], Awaitable[None]],
+        game_state: GameState,
 ) -> (str, str):
     """
     Process a player's response in kanji. The response will be checked for validity and the meaning of the word will be
-    displayed. If the word is invalid, then lose_life will be called. If the word is valid, the katakana and kanji of
-    the word will be returned.
+    displayed. If the word is valid, the katakana and kanji of the word will be returned.
 
     :param inter: Interaction object
     :param response: Response of the player
-    :param words_state: State of the game
-    :param lose_life: Function to call when a player loses a life
+    :param game_state: State of the game
     :return: Pair containing the katakana and kanji of the word played if the word is valid, otherwise an empty string
     """
     words = await kana_conversion.search_jisho(response)
 
     if not words:
-        await lose_life(f"{response} is not a valid word.")
+        await game_state.lose_life(f"{response} is not a valid word.", inter)
         return "", ""
 
     readings = [w['reading']
                 for _, word in words.items()
                 for w in word if
                 (w['word'] == response if w['word'] else w['reading'] == response)
-                and not get_invalid_reasons(w['reading'], words_state)]
+                and not get_invalid_reasons(w['reading'], game_state)]
 
     if not readings:
-        await lose_life(f"{response} is not a valid word.")
+        await game_state.lose_life(f"{response} is not a valid word.", inter)
         return "", ""
 
     reading = readings[0]
@@ -315,10 +305,10 @@ async def announce_previous_word(inter: nextcord.Interaction, prev_kata: str, pr
 
 
 def get_invalid_reasons(
-        kata: str, words_state: dict[str, str]
+        kata: str, game_state: GameState
 ) -> str:
     """
-    Check if a word is invalid for the current game state. The word will be checked for the following conditions:
+    Check if a word is invalid for the game_state.current_team game state. The word will be checked for the following conditions:
     - If the word is empty
     - If the word is only one mora
     - If the word has already been played
@@ -326,17 +316,17 @@ def get_invalid_reasons(
     - If the word ends with ん
 
     :param kata: Katakana of the word to check
-    :param words_state: State of the game
+    :param game_state: State of the game
     :return: String containing the reason the word is invalid, or an empty string if the word is valid
     """
-    prev_kata = words_state['prev_kata']
+    prev_kata = game_state.prev_kata
     if not prev_kata:
         return ""
     elif not kata:
         return "is not a valid Romaji word!"
     elif kata in kana_conversion.set_mora:
         return "is only one mora!"
-    elif kata in words_state['played_words']:
+    elif kata in game_state.played_words:
         return "has already been played!"
     elif not kana_conversion.match_kana(prev_kata, kana_conversion.hiragana_to_katakana(kata)):
         return "does not match the previous word!"
@@ -347,7 +337,7 @@ def get_invalid_reasons(
 
 async def announce_streak(inter: nextcord.Interaction, streak: int) -> None:
     """
-    Announce the current streak of the game.
+    Announce the game_state.current_team streak of the game.
 
     :param inter: Interaction object
     :param streak: Streak of the game
