@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 from nextcord import SlashOption
 from nextcord.ext import commands
 
-import botutils
+import game_turns
+from app.team import Team
 from constants import *
 
 load_dotenv()
@@ -50,11 +51,11 @@ async def duel(
 
     if user == bot.user:
         await inter.response.send_message("Lets practice Shiritori!")
-        await initiate_duel(inter, [[inter.user], [user]], pace, input_mode, chat)
+        await initiate_duel(inter, [Team([inter.user]), Team([user])], pace, input_mode, chat)
         return
 
-    view = botutils.DuelView(
-        [user], lambda: initiate_duel(inter, [[user], [inter.user]], pace, input_mode, chat),
+    view = game_turns.DuelView(
+        Team([user]), lambda: initiate_duel(inter, [Team([user]), Team([inter.user])], pace, input_mode, chat),
         "The duel request has timed out.")
     view.message = await inter.response.send_message(
         f"{user.mention}, you have been challenged to a"
@@ -77,10 +78,10 @@ async def survive(
                                       required=False, default=INPUT_ROMAJI),
         chat: str = SlashOption(description="Enable chatting during the game.", required=False)
 ) -> None:
-    players = list(set(bot.parse_mentions(players) + [inter.user])) if players else [inter.user]
+    players = Team(list(set(bot.parse_mentions(players) + [inter.user])) if players else [inter.user])
     if vs_ref:
         await inter.response.send_message("Let's practice shiritori!")
-        await initiate_duel(inter, [players, [bot.user]], pace, input_mode, chat)
+        await initiate_duel(inter, [players, Team([bot.user])], pace, input_mode, chat)
     else:
         await inter.response.send_message("Let's start a survival game!")
         await initiate_duel(inter, [players], pace, input_mode, chat)
@@ -117,83 +118,83 @@ async def battle(
         await inter.response.send_message("The same person cannot be in multiple teams!", ephemeral=True)
         return
 
-    teams = [team for team in [team_1, team_2, team_3, team_4, team_5] if team]
-    t = team_1 + team_2 + team_3 + team_4 + team_5
-    if inter.user not in t:
+    teams = [Team(team) for team in [team_1, team_2, team_3, team_4, team_5] if team]
+    all_players = team_1 + team_2 + team_3 + team_4 + team_5
+    if inter.user not in all_players:
         await inter.response.send_message("You cannot challenge a team for someone else!", ephemeral=True)
         return
-    t.pop(t.index(inter.user))
+    all_players.pop(all_players.index(inter.user))
 
-    if bot.user in t:
+    if bot.user in all_players:
         await inter.response.send_message("Lets practice Shiritori!")
         await initiate_duel(inter, teams, pace, input_mode, chat)
         return
 
-    view = botutils.DuelView(
-        t, lambda: initiate_duel(inter, teams, pace, input_mode, chat),
+    view = game_turns.DuelView(
+        Team(all_players), lambda: initiate_duel(inter, teams, pace, input_mode, chat),
         "The battle request has timed out.")
     view.message = await inter.response.send_message(
         f"{inter.user.display_name} has requested a {pace} battle in {input_mode}!\n" +
-        " vs ".join([botutils.team_to_string(team, mention=True) for team in teams]),
+        " vs ".join([team.to_string(mention=True) for team in teams]),
         view=view)
 
 
 async def initiate_duel(
-        inter: nextcord.Interaction, teams: list[list[nextcord.User]], pace: str, input_mode: str, chat: str
+        inter: nextcord.Interaction, teams: list[Team], pace: str, input_mode: str, chat: str
 ) -> None:
     """
     Initiates a duel or battle.
 
     :param inter: Interaction object
-    :param teams: List of teams. A team is a list of users.
+    :param teams: List of teams
     :param pace: Pace of the game
     :param input_mode: Input mode
     :param chat: "on" or "off"
     :return:
     """
-    if bot.user not in [u for team in teams for u in team]:
-        await inter.channel.send(f"{botutils.team_to_string(teams[0])},"
+    if bot.user not in [u for team in teams for u in team.players]:
+        await inter.channel.send(f"{teams[0].to_string()},"
                                  f" as the challenged, you have the right of the first word.")
 
-    current = teams[0]
+    current_team = teams[0]
     words_state = {
         "prev_kata": "",
         "prev_kanji": "",
         "played_words": set()
     }
-    lives = {team[0].id: 3 for team in teams}
-    num_words_played = {user: 0 for team in teams for user in team}
+    lives = {team.id: 3 for team in teams}
+    num_words_played = {user: 0 for team in teams for user in team.players}
 
     async def wait_callback(check):
         return await bot.wait_for('message', timeout=TIME_SPEED if pace == PACE_SPEED else TIME_NORMAL, check=check)
 
-    async def knockout_team(team: list[nextcord.User]) -> list[nextcord.User]:
+    async def knockout_team(team: Team) -> Team or None:
         index = teams.index(team)
         teams.pop(index)
         if len(teams) == 1:
-            await inter.channel.send(f"{botutils.team_to_string(teams[0], mention=True)} has won!")
-            return []
+            await inter.channel.send(f"{teams[0].to_string(mention=True)} has won!")
+            return None
         return teams[index % len(teams)]
 
     while True:
         streak = len(words_state['played_words'])
         logger.info(f"Streak {streak}, Lives: {lives}, Words played: {num_words_played}")
-        current_id = current[0].id
+        current_id = current_team[0].id
 
         async def lose_life(message: str) -> None:
             lives[current_id] -= 1
             await inter.channel.send(f"{message} You have {lives[current_id]} lives remaining.")
 
         if lives[current_id] <= 0:
-            await inter.channel.send(f"{botutils.team_to_string(current)} {'have' if len(current) > 1 else 'has'}"
+            await inter.channel.send(f"{current_team.to_string()} {'have' if len(current_team) > 1 else 'has'}"
                                      f" lost all their lives. ")
-            current = await knockout_team(current)
-            if not current:
+            current_team = await knockout_team(current_team)
+            if not current_team:
                 break
 
         # Bot's turn
-        if bot.user in current:
-            (played_kata, played_kanji) = await botutils.take_bot_turn(inter, words_state)
+        if bot.user in current_team:
+            (played_kata, played_kanji) = await game_turns.take_bot_turn(inter, words_state)
             logger.info(f"Bot played {played_kata}")
             if played_kata:
                 words_state = {
@@ -201,22 +202,22 @@ async def initiate_duel(
                     "prev_kanji": played_kanji,
                     "played_words": words_state['played_words'].union({played_kata})
                 }
-                current = teams[(teams.index(current) + 1) % len(teams)]
+                current_team = teams[(teams.index(current_team) + 1) % len(teams)]
                 num_words_played[bot.user] += 1
                 continue
             else:
                 break
 
-        await botutils.announce_streak(inter, streak)
+        await game_turns.announce_streak(inter, streak)
 
         # User's turn
-        (cont, played_kata, played_kanji, player) = await botutils.take_user_turn(
-            inter, current, pace, input_mode, chat, words_state, wait_callback, lose_life
+        (cont, played_kata, played_kanji, player) = await game_turns.take_user_turn(
+            inter, current_team, pace, input_mode, chat, words_state, wait_callback, lose_life
         )
 
         if not cont:
-            current = await knockout_team(current)
-            if not current:
+            current_team = await knockout_team(current_team)
+            if not current_team:
                 break
             continue
         if not played_kata:
@@ -227,7 +228,7 @@ async def initiate_duel(
             "prev_kanji": played_kanji,
             "played_words": words_state['played_words'].union({played_kata})
         }
-        current = teams[(teams.index(current) + 1) % len(teams)]
+        current_team = teams[(teams.index(current_team) + 1) % len(teams)]
         num_words_played[player] += 1
 
     # The game has ended

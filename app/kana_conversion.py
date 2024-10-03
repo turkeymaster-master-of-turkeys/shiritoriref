@@ -25,7 +25,7 @@ def match_kana(previous: str, current: str) -> bool:
 
 def normalise_katakana(katakana: str) -> str:
     """
-    Normalises katakana by converting choonpu to the correct kana, normalising rare/ interchangable kana and small kana
+    Normalises katakana by converting choonpu to the correct kana, normalising rare/ interchangeable kana and small kana
 
     :param katakana: Katakana to normalise
     :return: Normalised katakana
@@ -364,7 +364,7 @@ katakana_to_hiragana_dict = {v: k for k, v in hiragana_to_katakana_dict.items()}
 
 set_hira = {v[-1] for _, v in romaji_to_hiragana_dict.items()}.union({'っ'})
 set_kata = {v[-1] for _, v in romaji_to_katakana_dict.items()}.union({'ー', 'ッ', 'ヶ', 'ヵ'})
-set_kata_mora = {v for _, v in romaji_to_katakana_dict.items()}
+set_mora = {v for _, v in romaji_to_katakana_dict.items()}
 set_romaji = set("abcdefghijkmnoprstuvwyz")
 
 set_a = {'ア', 'カ', 'サ', 'タ', 'ナ', 'ハ', 'マ', 'ヤ', 'ラ', 'ワ', 'ガ', 'ザ', 'ダ', 'バ', 'パ'}
