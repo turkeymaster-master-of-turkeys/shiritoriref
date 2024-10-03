@@ -44,8 +44,7 @@ async def duel(
                                                   f"Default: {InputMode.ROMAJI}",
                                       choices=InputMode.choices(),
                                       required=False, default=InputMode.ROMAJI),
-        chat_on: bool = SlashOption(description="Enable chatting during the duel. "
-                                                f"Start words with \"{'\" or \"'.join(MESSAGE_BEGIN)}\" "
+        chat_on: bool = SlashOption(description="Enable chatting during the duel. Start words with \"> \" or \"、\" "
                                                 "to submit in chat mode. Default: true",
                                     required=False, default=True)
 ) -> None:
@@ -83,8 +82,8 @@ async def survive(
                                                   f"Default: {InputMode.ROMAJI}",
                                       choices=InputMode.choices(),
                                       required=False, default=InputMode.ROMAJI),
-        chat_on: bool = SlashOption(description="Enable chatting during the game. "
-                                                f"Start words with \"{'\" or \"'.join(MESSAGE_BEGIN)}\"",
+        chat_on: bool = SlashOption(description="Enable chatting during the duel. Start words with \"> \" or \"、\" "
+                                                "to submit in chat mode. Default: on",
                                     required=False, default=True)
 ) -> None:
     players = Team(list(set(bot.parse_mentions(players) + [inter.user])) if players else [inter.user])
@@ -116,8 +115,7 @@ async def battle(
                                                   f"Default: {InputMode.ROMAJI}",
                                       choices=InputMode.choices(),
                                       required=False, default=InputMode.ROMAJI),
-        chat_on: bool = SlashOption(description="Enable chatting during the duel. "
-                                                f"Start words with \"{'\" or \"'.join(MESSAGE_BEGIN)}\" "
+        chat_on: bool = SlashOption(description="Enable chatting during the duel. Start words with \"> \" or \"、\" "
                                                 "to submit in chat mode. Default: on",
                                     required=False, default=True)
 ) -> None:
