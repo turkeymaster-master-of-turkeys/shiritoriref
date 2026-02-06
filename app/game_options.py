@@ -19,6 +19,9 @@ class InputMode(Enum):
     def choices():
         return [input_mode.value for input_mode in InputMode]
 
+    def __str__(self):
+        return self.value
+
 
 class GameOptions:
     def __init__(self, pace: Pace, input_mode: InputMode, chat_on: bool):

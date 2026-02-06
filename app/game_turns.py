@@ -188,10 +188,9 @@ async def process_player_romaji(
         return "", ""
 
     words_romaji = {kana_conversion.kana_to_romaji(k): v
-                    for k, v in (await kana_conversion.search_jisho(romaji)).items()}
-    for k in kata:
-        words_romaji.update({kana_conversion.kana_to_romaji(k): v
-                             for k, v in (await kana_conversion.search_jisho(k)).items()})
+                    for search_term in [romaji, response, *kata, *hira]
+                    for k, v in (await kana_conversion.search_jisho(search_term)).items()}
+
     logger.info(f"Romaji dictionary: {str(words_romaji.keys())}")
     normalised = kana_conversion.kana_to_romaji(kata[0])
 
