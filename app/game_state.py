@@ -51,6 +51,7 @@ class GameState:
         :param kata: Katakana of the word to check
         :return: String containing the reason the word is invalid, or an empty string if the word is valid
         """
+        kata = kana_conversion.hiragana_to_katakana(kata)
         prev_kata = self.prev_kata
         if not kata:
             return "is not a valid Romaji word!"
@@ -80,18 +81,19 @@ class GameState:
         :return:
         """
         streak = self.get_streak()
-        if streak != 0 and streak % 5 == 0:
-            if streak % 100 == 0:
-                await inter.channel.send(f"The streak is {streak}!")
-                await inter.channel.send(f"https://tenor.com/view/orangutan-driving-gif-24461244")
-            if streak % 50 == 0:
-                await inter.channel.send(f"The streak is {streak}! :orangutan::orangutan::orangutan:")
-            if streak % 25 == 0:
-                await inter.channel.send(f"The streak is {streak}! :fire::fire::fire:")
-            elif streak % 10 == 0:
-                await inter.channel.send(f"The streak is {streak}! :fire:")
-            else:
-                await inter.channel.send(f"The streak is {streak}!")
+        if streak == 0:
+            return
+        elif streak % 100 == 0:
+            await inter.channel.send(f"The streak is {streak}! :orangutan::orangutan::orangutan:")
+            await inter.channel.send(f"https://tenor.com/view/orangutan-driving-gif-24461244")
+        elif streak % 50 == 0:
+            await inter.channel.send(f"The streak is {streak}! :orangutan::orangutan::orangutan:")
+        elif streak % 25 == 0:
+            await inter.channel.send(f"The streak is {streak}! :fire::fire::fire:")
+        elif streak % 10 == 0:
+            await inter.channel.send(f"The streak is {streak}! :fire:")
+        elif streak % 5 == 0:
+            await inter.channel.send(f"The streak is {streak}!")
 
     async def announce_previous_word(self, inter: nextcord.Interaction) -> None:
         """

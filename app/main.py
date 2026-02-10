@@ -19,7 +19,7 @@ bot = commands.Bot(intents=intents)
 
 logger = logging.getLogger("shiritori-ref")
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
@@ -163,7 +163,7 @@ async def initiate_duel(
     :param options: Game options
     :return:
     """
-    if bot.user not in [u for team in teams for u in team.players]:
+    if bot.user not in [u for team in teams for u in team.players] and len(teams) >= 2:
         await inter.channel.send(f"{teams[0].to_string()},"
                                  f" as the challenged, you have the right of the first word.")
     game_state = GameState(teams)

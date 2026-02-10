@@ -67,13 +67,11 @@ async def take_bot_turn(
     :return: The kana and kanji of the word to play
     """
     prev_kata = kana_conversion.normalise_katakana(game_state.prev_kata) or "ア"
-    played_words = game_state.played_words
 
     await inter.channel.send(f"My turn!")
 
     words_hira = await kana_conversion.get_words_starting_with(kana_conversion.katakana_to_hiragana(prev_kata))
-    hira_candidates = [k for k in words_hira.keys() if
-                       kana_conversion.hiragana_to_katakana(k) not in played_words and k[-1] != 'ん']
+    hira_candidates = [h for h in words_hira.keys() if not game_state.get_invalid_reasons(h)]
 
     logger.info(f"Hira candidates: {hira_candidates}")
 
@@ -84,7 +82,7 @@ async def take_bot_turn(
         return kata, words_hira[hira][0]['word'] or words_hira[hira][0]['reading']
 
     words_kata = await kana_conversion.get_words_starting_with(prev_kata)
-    kata_candidates = [k for k in words_kata.keys() if k not in played_words and k[-1] != 'ン']
+    kata_candidates = [k for k in words_kata.keys() if not game_state.get_invalid_reasons(k)]
 
     logger.info(f"Kata candidates: {kata_candidates}")
 
@@ -135,7 +133,7 @@ async def take_user_turn(
         return False, "", "", None
 
     # Remove the message beginning indicator
-    response: str = re.sub("^" + "|".join([f"({b})" for b in MESSAGE_BEGIN]), "", response_msg.content)
+    response: str = re.sub("^" + "|".join([f"({b})" for b in MESSAGE_BEGIN]), "", response_msg.content).lower()
     if response == END_DUEL:
         await inter.channel.send(f"{game_state.current_team.to_string()} has ended the game.")
         return False, "", "", None
@@ -203,38 +201,6 @@ async def process_player_romaji(
     reading = matches[0]['reading']
 
     return kana_conversion.hiragana_to_katakana(reading), matches[0]['word'] or matches[0]['reading']
-
-
-# async def process_player_kana(
-#         inter: nextcord.Interaction,
-#         response: str,
-#         game_state: GameState,
-# ) -> (str, str):
-#     """
-#     Process a player's response in kana. The response will be checked for validity and the meaning of the word will be
-#     displayed. If the word is valid, the katakana and kanji of the word will be returned.
-
-#     :param inter: Interaction object
-#     :param response: The response of the player
-#     :param game_state: State of the game
-#     :return: Pair containing the katakana and kanji of the word played if the word is valid, otherwise an empty string
-#     """
-#     words = await kana_conversion.search_jisho(response)
-
-#     if not words:
-#         await game_state.lose_life(f"{response} is not a valid word.", inter)
-#         return "", ""
-
-#     kata = kana_conversion.hiragana_to_katakana(response)
-#     invalid = game_state.get_invalid_reasons(response)
-#     if invalid:
-#         await game_state.lose_life(f"{response} {invalid}", inter)
-
-#     await inter.channel.send(kana_conversion.meaning_to_string(words[response]))
-
-#     kanji = words[response][0]['word'] or words[response][0]['reading']
-
-#     return kata, kanji
 
 
 async def process_player_kanji(
