@@ -9,6 +9,9 @@ class Pace(Enum):
     def choices():
         return [pace.value for pace in Pace]
 
+    def __str__(self):
+        return self.value
+
 
 class InputMode(Enum):
     ROMAJI = "romaji"

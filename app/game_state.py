@@ -52,15 +52,13 @@ class GameState:
         :return: String containing the reason the word is invalid, or an empty string if the word is valid
         """
         prev_kata = self.prev_kata
-        if not prev_kata:
-            return ""
-        elif not kata:
+        if not kata:
             return "is not a valid Romaji word!"
         elif kata in kana_conversion.set_mora:
             return "is only one mora!"
         elif kata in self.played_words:
             return "has already been played!"
-        elif not kana_conversion.match_kana(prev_kata, kana_conversion.hiragana_to_katakana(kata)):
+        elif prev_kata and not kana_conversion.match_kana(prev_kata, kana_conversion.hiragana_to_katakana(kata)):
             return "does not match the previous word!"
         elif kata[-1] == 'ン':
             return "ends with ん!"

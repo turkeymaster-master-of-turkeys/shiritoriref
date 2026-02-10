@@ -183,9 +183,9 @@ def romaji_to_katakana(word: str) -> tuple[list[str], list[str]]:
         else:
             katakana = convert_choonpu(kata[i - 1], kata[i]) + katakana
 
-    words = ['']
-    for c in katakana:
-        words_n = [w + n_dict[c] for w in words] if c in 'ナニヌネノ' else []
+    words = katakana[:1]
+    for c in katakana[1:]:
+        words_n = [w + n_dict[c] for w in words] if c in n_dict else []
         words = [w + c for w in words] + words_n
 
     return words, words_no_choonpu

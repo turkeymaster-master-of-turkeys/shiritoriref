@@ -146,11 +146,8 @@ async def take_user_turn(
         if options.input_mode == InputMode.ROMAJI:
             (played_kata, played_kanji) = await process_player_romaji(inter, response, game_state)
             return True, played_kata, played_kanji, response_msg.author
-        else:
-            await inter.channel.send(f"You can't use romaji in this mode!")
-            return True, "", "", None
     elif kana_conversion.is_kana(response) and options.input_mode != InputMode.KANJI:
-        (played_kata, played_kanji) = await process_player_kana(inter, response, game_state)
+        (played_kata, played_kanji) = await process_player_romaji(inter, response, game_state)
         return True, played_kata, played_kanji, response_msg.author
     else:
         (played_kata, played_kanji) = await process_player_kanji(inter, response, game_state)
@@ -171,8 +168,9 @@ async def process_player_romaji(
     :param game_state: State of the game
     :return: Pair containing the katakana and kanji of the word played if the word is valid, otherwise an empty string
     """
+    response = kana_conversion.kana_to_romaji(response)
     romaji = kana_conversion.remove_romaji_long_vowels(response)
-    hira, kata = kana_conversion.romaji_to_hira_kata(kana_conversion.kana_to_romaji(response))
+    hira, kata = kana_conversion.romaji_to_hira_kata(response)
 
     if not kata:
         await inter.channel.send(f"{response} is not a valid romaji word.")
@@ -181,11 +179,13 @@ async def process_player_romaji(
     async def invalid_word(r: str):
         await game_state.lose_life(f"{', '.join(hira if hira else kata) or response} {r}", inter)
 
-    reasons = [game_state.get_invalid_reasons(k) for k, _ in zip(kata, hira)]
-    invalid = [reason for reason in reasons if reason]
+    reasons = [(k, h, game_state.get_invalid_reasons(k)) for k, h in zip(kata, hira)]
+    invalid = [reason for _, _, reason in reasons if reason]
     if invalid:
         await invalid_word(invalid[0])
         return "", ""
+    kata = [k for k, _, reason in reasons if not reason]
+    hira = [h for _, h, reason in reasons if h and not reason]
 
     words_romaji = {kana_conversion.kana_to_romaji(k): v
                     for search_term in [romaji, response, *kata, *hira]
@@ -205,37 +205,36 @@ async def process_player_romaji(
     return kana_conversion.hiragana_to_katakana(reading), matches[0]['word'] or matches[0]['reading']
 
 
-async def process_player_kana(
-        inter: nextcord.Interaction,
-        response: str,
-        game_state: GameState,
-) -> (str, str):
-    """
-    Process a player's response in kana. The response will be checked for validity and the meaning of the word will be
-    displayed. If the word is valid, the katakana and kanji of the word will be returned.
+# async def process_player_kana(
+#         inter: nextcord.Interaction,
+#         response: str,
+#         game_state: GameState,
+# ) -> (str, str):
+#     """
+#     Process a player's response in kana. The response will be checked for validity and the meaning of the word will be
+#     displayed. If the word is valid, the katakana and kanji of the word will be returned.
 
-    :param inter: Interaction object
-    :param response: The response of the player
-    :param game_state: State of the game
-    :return: Pair containing the katakana and kanji of the word played if the word is valid, otherwise an empty string
-    """
-    words = await kana_conversion.search_jisho(response)
+#     :param inter: Interaction object
+#     :param response: The response of the player
+#     :param game_state: State of the game
+#     :return: Pair containing the katakana and kanji of the word played if the word is valid, otherwise an empty string
+#     """
+#     words = await kana_conversion.search_jisho(response)
 
-    if not words:
-        await game_state.lose_life(f"{response} is not a valid word.", inter)
-        return "", ""
+#     if not words:
+#         await game_state.lose_life(f"{response} is not a valid word.", inter)
+#         return "", ""
 
-    invalid = game_state.get_invalid_reasons(response)
-    if invalid:
-        await game_state.lose_life(f"{response} {invalid}", inter)
-        return "", ""
+#     kata = kana_conversion.hiragana_to_katakana(response)
+#     invalid = game_state.get_invalid_reasons(response)
+#     if invalid:
+#         await game_state.lose_life(f"{response} {invalid}", inter)
 
-    await inter.channel.send(kana_conversion.meaning_to_string(words[response]))
+#     await inter.channel.send(kana_conversion.meaning_to_string(words[response]))
 
-    kata = kana_conversion.hiragana_to_katakana(response)
-    kanji = words[response][0]['word'] or words[response][0]['reading']
+#     kanji = words[response][0]['word'] or words[response][0]['reading']
 
-    return kata, kanji
+#     return kata, kanji
 
 
 async def process_player_kanji(

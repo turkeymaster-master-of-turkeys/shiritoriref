@@ -75,7 +75,7 @@ async def duel(
 async def survive(
         inter: nextcord.Interaction,
         players: str = SlashOption(description="The players in the game", required=False),
-        vs_ref: bool = SlashOption(description="Play against the bot. default: true", required=False, default=True),
+        vs_ref: bool = SlashOption(description="Play against the bot. default: false", required=False, default=False),
         pace: str = SlashOption(description=f"The pace of the game. Normal - 60s, Speed - 15s. Default: {Pace.NORMAL}",
                                 choices=Pace.choices(), required=False, default=Pace.NORMAL),
         input_mode: str = SlashOption(description="The lowest allowed level input mode of the game. "
@@ -227,6 +227,22 @@ async def initiate_duel(
         f"The final streak was {game_state.get_streak()}!\n" +
         "\n".join([f"{user.global_name or user.display_name} played {num} words"
                    for user, num in game_state.num_words_played.items()]))
+
+
+@bot.slash_command(
+    name="help",
+    description="Get instructions on how to play with Shiritori Referee",
+    guild_ids=GUILDS,
+)
+async def help(inter: nextcord.Interaction) -> None:
+    await inter.response.send_message(
+        "Welcome to Shiritori Referee! Here are the commands you can use:\n"
+        "/duel - Challenge someone to a duel\n"
+        "/survive - Start a survival mode game\n"
+        "/battle - Challenge a team to a battle\n"
+        "@mention the people you want to include in the command arguments\n"
+        "Use start your message with '> ' or '、' (Japanese comma) to submit your word\n"
+        "Input modes limit the minimum level of input allowed. e.g. if the input mode is set to KANA, you cannot submit words in Romaji, but you can submit Kanji.\n")
 
 
 if __name__ == '__main__':
